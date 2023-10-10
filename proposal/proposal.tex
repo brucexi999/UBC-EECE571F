@@ -1,0 +1,175 @@
+\documentclass[letterpaper]{article}
+
+
+\PassOptionsToPackage{numbers}{natbib}
+\usepackage[preprint]{neurips_2023}
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{tabularx,ragged2e}
+
+
+\newcolumntype{L}{>{\RaggedRight}X}
+\pgfplotsset{width=10cm,compat=1.9}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\title{Detailed routing using GNN-based multi-agent reinforcement learning}
+
+\author{%
+    Roozmehr Jalilian, Bruce Xi \\
+    Department of Electrical \& Computer Engineering \\
+    The University of British Columbia \\
+    \texttt{\{roozmehr.jalilian,xsd99\}@ece.ubc.ca} \\
+    Vancouver, BC V6T 1Z4
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+    Routing has always been one of the most challenging stages of digital logic design for field-programmable gate arrays (FPGAs) and application-specific integrated circuits (ASICs), both in terms of complexity and time consumption. Designs with a large number of nets can take hours and maybe days to be routed, even using state-of-the-art commercial CAD tools. Thus, there has been a surge of interest to use machine-learning-based approaches to tackle these difficulties. We propose a novel multi-agent reinforcement learning (RL) approach that incorporates a graph neural network (GNN) as its policy network. Having multiple agents enables us to route multiple nets simultaneously, while using a GNN as the policy network enables the agents to generalize their learned routing strategy to new, unseen designs.
+\end{abstract}
+
+
+\section{Introduction}
+
+
+    Digital logic design involves three major stages: {\bf RTL}\footnote{Register transfer level}{\bf design}, {\bf synthesis}, and {\bf physical design}. An engineer first decides on the architecture of a digital circuit, and describes it with the help of a {\it hardware description language} (HDL). The described architecture is then fed into a CAD tool, which first synthesizes the design using different logic gates, and then maps the gates onto the chip canvas. \\
+    
+    Physical design is perhaps the most challenging stage of the whole process, as it involves two sophisticated and time-consuming phases: {\bf placement} and {\bf routing}. The goal of this stage is to place a large number of logic gates on the chip and route them in such a way that the final circuit satisfies multiple constraints (timing, area, etc.). Routing, in general, is the more complex, as the wiring resources on the chip are limited and routing {\bf congestion} must also be taken into account. \\
+    
+    Due to the problem's complexity, routing is generally broken into two sub-phases: {\bf global} and {\bf detailed}. Global routing first partitions the chip into routing regions and searches for region-to-region paths for all signal nets; this is followed by detailed routing, which determines the exact tracks and vias of these nets based on their region assignments \cite{Kahng2022}. \\
+    
+    Obtaining a valid solution which satisfies all constraints might usually take up to several days for large circuits, leading to a surge of interest to use machine learning techniques, aiming to find solutions much faster while improving or maintaining the same level of solution quality.
+
+
+\section{Related work}
+
+
+    {\it TODO: Mention 1 or more analytical routers, and mention some routers that also incorporate RL and/or GNNs. At the end, mention that no other work has used a multi-agent RL approach which also involves a GNN (no one even has used vanilla multi-agent for that matter). I suggest you also include a very brief outline of RL and GNNs in here, before going into detail for the papers that have used them.}
+    
+    
+\section{Methodology}
+\label{method}
+
+
+    {\it TODO: Briefly explain what is multi-agent RL and its advantages for our given problem. Also mention the paper which used a GNN as the policy network for the RL agent \cite{Almasan2022}. Also discuss the overall architecture of the GNN that we're going to use, and mention which libraries we're using (i.e., PyTorch, PyG, and RLLib). Adding a figure depicting the routing problem in a grid would also be very helpful. \\
+    Also, don't forget to come up with a rough timeline and replace the 'X' values below!}  \\
+    
+    \begin{figure}[htb]
+        \centering
+        \fbox{\rule[-.5cm]{0cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
+        \caption{A simple routing scheme}
+    \end{figure}
+    
+    Here is a list of tasks that needs to be accomplished in order:
+    
+    \begin{itemize}
+        \item Extended literature review (X days)
+        
+        \item Getting familiar with the required Python libraries (X days)
+        
+        \item Finding appropriate benchmarks and converting them into the same format (X days)
+        
+        \item Implementing the RL agent (X days)
+        
+        \item Training the RL agent and tuning hyperparameters (X days)
+        
+        \item Testing the RL agent on benchmarks both similar to and different from the training designs (X days)
+        
+        \item Creating figures and tables (X hours)
+        
+        \item Writing the project report (X days)
+    \end{itemize}
+    
+    
+\section{Experiments}
+
+
+    As stated in Section \ref{method}, our goal is to develop a model that not only routes different nets simultaneously, but is also able to generalize to unseen designs based on its learned policy.
+    
+    
+\subsection{Testing on benchmarks with similar circuit size to the training data}
+
+    The goal of this experiment is to ensure that the model has learned a good policy based on its training data. We would test the model on circuits with canvas sizes, number of nets, and total number of pins per net similar to that of the training benchmarks. We would then compare the results to other routers in terms of runtime, memory usage, and solution quality.
+    
+    \begin{figure}[htb]
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[
+                axis lines = left,
+                xlabel = Iteration,
+                ylabel = Total reward,
+                ymin=5, ymax=15,
+                ]
+                % The reward function
+                \addplot [
+                domain=0:100, 
+                samples=100, 
+                color=red,
+                ]
+                {10 + 2 * exp(-x / 20)};
+                \addlegendentry{RL model}
+                % Baseline
+                \addplot [
+                domain=0:100, 
+                samples=100, 
+                color=blue,
+                ]
+                {10};
+                \addlegendentry{Baseline}
+            \end{axis}
+        \end{tikzpicture}
+        \caption{Placeholder figure for total reward vs. time}
+    \end{figure}
+
+    \begin{table}[htb]
+        \caption{Placeholder table for the experiments}
+        \centering
+        \begin{tabularx}{\textwidth}{LLLLLLL}
+            \toprule
+            \multicolumn{4}{c}{Benchmark specs} &
+            \multicolumn{3}{c}{Results} \\
+            \cmidrule(r){1-4}
+            \cmidrule(r){5-7}
+            Name & Canvas size & \# of nets & Avg. \# of pins per net & Runtime (s) & Max. memory usage (MB) & Total wirelength \\
+            \midrule
+            test1 & \(8 \times 8\) & 5 & 2.5 & 1.25 & 250 & 100 \\
+            test2 & \(6 \times 6\) & 3 & 1 & 0.60 & 150 & 70 \\
+            \bottomrule
+        \end{tabularx}
+    \end{table}
+    
+
+\subsection{Testing on benchmarks with different circuit size than the training data}
+
+    We aim to test the {\it generalizability} of the model in this experiment, by applying to designs with different number of nets, chip canvas size, and number of pins per net. However, we're won't use benchmarks that are {\it significantly} different from the training designs, as the complexity of routing increases exponentially within very large designs. The chip canvas size for the test designs won't be much larger than the training designs, and we're more interested in observing how our model handles {\it different net topologies} in similarly-sized circuits.
+    
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+{
+\small
+\bibliographystyle{IEEEtranN}
+\bibliography{references}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}
