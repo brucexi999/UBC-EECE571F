@@ -24,7 +24,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-\title{Detailed routing using GNN-based multi-agent reinforcement learning}
+\title{GNN as Policy Network for Deep Reinforcement Learning Generalization}
 
 \author{%
     Roozmehr Jalilian, Shidi Xi \\
@@ -42,13 +42,19 @@
 
 
 \begin{abstract}
-Routing, which can be modeled as a pathfinding problem,  has always been one of the most challenging stages of integrated circuits (IC) design, both in terms of complexity and time consumption. Even with state-of-the-art commercial CAD tools, complex designs can take hours and maybe days to be routed. Thus, there has been a surge of interest to use machine-learning-based approaches to tackle these difficulties. In a previous work, we have proposed a novel multi-agent reinforcement learning (RL) approach for routing. Although the RL router can deliver better solutions than a baseline, it suffers from poor generalizability, that is, every problem has to be solved by training a policy from scratched. Hence, in this work, we propose a novel graph neural network (GNN) and implement it as the policy network of the RL router. This enables the agents to generalize their learned routing strategy to new, unseen designs and saves computation time.
+Routing, which can be modeled as a pathfinding problem,  has always been one of the most challenging stages of integrated circuits (IC) design, both in terms of complexity and time consumption. Even with state-of-the-art commercial CAD tools, complex designs can take hours and maybe days to be routed. Thus, there has been a surge of interest to use machine-learning-based approaches to tackle these difficulties. In a previous work, we have proposed a novel reinforcement learning (RL) approach for routing. Although the RL router can deliver better solutions than a baseline, it suffers from poor generalizability, that is, every problem has to be solved by training a policy from scratched. Hence, in this work, we propose a novel graph neural network (GNN) and implement it as the policy network of the RL router. This enables the agents to generalize their learned routing strategy to new, unseen designs and saves computation time.
 \end{abstract}
 
 \section{Introduction}
-IC routing is the process of connecting different electrical contact points (pins) on a chip with metallic wires. For example, the CPU and the memory in your computer chip must be connected with wires such that they can transfer data and do computing. We can model routing as a pathfinding problem, where the chip is abstracted into a 2-dimensional grid, and the pins, defined by (x, y) coordinates, sit on the nodes of this grid. The task is then to find paths between the specified nodes by traversing through the grid edges. In addition, each edge has a feature called the capacity, which represents the maximum number of wires permitted to use this edge. This constraint comes from the fact that in a real physical world, each wire has some thickness, and the number of wires allowed within a chip region is finite. If the usage of an edge exceeds its capacity, the edge is overflowed, which is highly undesirable. Hence, to find a optimal routing solution, we need to determine optimal paths to connect pins to minimize the total wirelength while maintaining zero edge overflow.
+IC routing is the process of connecting different electrical contact points (pins) on a chip with metallic wires. For example, the CPU and the memory in a computer chip must be connected with wires such that they can transfer data and do computing. We can model routing as a pathfinding problem, where the chip is abstracted into a 2-dimensional grid, and the pins, defined by (x, y) coordinates, sit on the nodes of this grid. The task is then to find paths between the specified nodes by traversing through the grid edges. In addition, each edge has a feature called the capacity, which represents the maximum number of wires permitted to use this edge. This constraint comes from the fact that in a real physical world, each wire has some thickness, and the number of wires allowed within a chip region is finite. If the usage of an edge exceeds its capacity, the edge is overflowed, which is highly undesirable. Hence, to find a optimal routing solution, we need to determine optimal paths to connect pins to minimize the total wirelength while maintaining zero edge overflow.
 
-%A set of pins that need to be connected together is called a net, and during a routing process, there will be many nets that must be routed, they form a set called the netlist. 
+A set of pins that need to be connected together is called a net, and during a routing process, there will be many nets that must be routed, they form a set called the netlist.
+
+In our previous work, we proposed an multi-agent RL router to solve the IC routing problem, where each agent is responsible for routing one net, and they take actions concurrently. We designed the agents to be homogeneous and fully-cooperative, and hence, they are governed by one super policy. The RL router was trained using proximal policy optimization (PPO) (REF), and was evaluated using benchmarks. The results showed the RL router can significantly outperform an A* baseline, however, the policy trained for one benchmark does not generalize to other unseen although very similar problems. After extensive analysis, we conclude the reason is because the policy neural network, consists of several full-connected (FC) layer, cannot learn rich information from the state encodings and thus has poor generalizability.
+
+As opposed to a feed-forward neural network (NN), GNNs can generalize well when dealing with graphical data (REF), which is the case for routing problem that can be modeled as a grid graph. Therefore, in this project we propose a novel message-passing GNN architecture, which will be embedded into our developed RL router as the policy network. The GNN will take the routing grid graph from the environment as the state input and output actions. The aim is to enhance the router, such that it can generalize trained policies to unseen but similar problems, and hence, achieve significant improvement in terms of computation time.
+
+ 
 
 %Digital logic design involves three major stages: {\bf RTL}\footnote{Register transfer level}{\bf design}, {\bf synthesis}, and {\bf physical design}. An engineer first decides on the architecture of a digital circuit, and describes it with the help of a {\it hardware description language} (HDL). The described architecture is then fed into a CAD tool, which first synthesizes the design using different logic gates, and then maps the gates onto the chip canvas.
 
@@ -58,21 +64,25 @@ IC routing is the process of connecting different electrical contact points (pin
 
 %Obtaining a valid solution which satisfies all constraints might usually take up to several days for large circuits, leading to a surge of interest to use machine learning techniques, aiming to find solutions much faster while improving or maintaining the same level of solution quality.
 
-TODO: RL approach, poor generalizability, propose GNN as policy network, should probably trim down the wording for routing, as the focus for this project is about designing GNN to achieve RL generalizability.
+%TODO: RL approach, poor generalizability, propose GNN as policy network, should probably trim down the wording for routing, as the focus for this project is about designing GNN to achieve RL generalizability.
 
 
 \section{Related work}
+Many works in the literature have verified the effectiveness of using GNN as the policy/value network of a RL model to promote generalization, given the environment that the agent is trying to solve can be modeled as a graph. However, to the best of our knowledge, no work has been directly done in terms of using RL as an approach of IC routing, and is combined with a GNN for generalizability.
 
-
-{\it TODO: Mention 1 or more analytical routers, and mention some routers that also incorporate RL and/or GNNs. At the end, mention that no other work has used a multi-agent RL approach which also involves a GNN (no one even has used vanilla multi-agent for that matter). I suggest you also include a very brief outline of RL and GNNs in here, before going into detail for the papers that have used them.}
-    
+\cite{Liao2020} proposed an RL IC router that is trained by deep Q-network (DQN), i.e., using a feed-forward NN as the value network of the RL agent. However it suffers from the same limitation as our previous work, the results show no signs of generalization. In the work of \cite{Almasan2022}, the authors proposed a GNN as the value network of an RL agent trained by DQN, the solution achieved good generalization in the field of network routing, which is a similar problem as IC routing. This work is the main aspiration of our proposal. Similarly, \cite{Chen2023} and \cite{Wang2018} reported similar concepts of implementing GNN as the policy network of an RL model, where the problem can be abstracted into a graph. Additionally. \cite{Mirhoseini2021} and \cite{Yue2022} used GNN as the encoder layer to their RL policy and value networks. 
     
 \section{Methodology}
 \label{method}
+In this proposal, we confine the model discussion to the simplest case of IC routing. This is to ensure that a prototype can be swiftly developed. As the project proceeds, more complexities will be added such that the model becomes more compact.
+\subsection{Modeling IC routing as a grid graph}
+node feature: agent's position, target position
+edge feature: capacity 
+\subsection{RL policy network}
+\subsection{GNN architectural design}
 
 
-{\it TODO: Briefly explain what is multi-agent RL and its advantages for our given problem. Also mention the paper which used a GNN as the policy network for the RL agent \cite{Almasan2022}. Also discuss the overall architecture of the GNN that we're going to use, and mention which libraries we're using (i.e., PyTorch, PyG, and RLLib). Adding a figure depicting the routing problem in a grid would also be very helpful. \\
-Also, don't forget to come up with a rough timeline and replace the 'X' values below!}  \\
+%TODO: Briefly explain what is multi-agent RL and its advantages for our given problem. Also mention the paper which used a GNN as the policy network for the RL agent \cite{Almasan2022}. Also discuss the overall architecture of the GNN that we're going to use, and mention which libraries we're using (i.e., PyTorch, PyG, and RLLib). Adding a figure depicting the routing problem in a grid would also be very helpful. Also, don't forget to come up with a rough timeline and replace the 'X' values below!
 
 \begin{figure}[htb]
     \centering
