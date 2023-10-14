@@ -2,7 +2,7 @@
 
 
 \PassOptionsToPackage{numbers}{natbib}
-\usepackage[preprint]{neurips_2023}
+\usepackage[final]{neurips_2023}
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
@@ -42,19 +42,18 @@
 
 
 \begin{abstract}
-Routing, which can be modeled as a pathfinding problem,  has always been one of the most challenging stages of integrated circuits (IC) design, both in terms of complexity and time consumption. Even with state-of-the-art commercial CAD tools, complex designs can take hours and maybe days to be routed. Thus, there has been a surge of interest to use machine-learning-based approaches to tackle these difficulties. In a previous work, we have proposed a novel reinforcement learning (RL) approach for routing. Although the RL router can deliver better solutions than a baseline, it suffers from poor generalizability, that is, every problem has to be solved by training a policy from scratched. Hence, in this work, we propose a novel graph neural network (GNN) and implement it as the policy network of the RL router. This enables the agents to generalize their learned routing strategy to new, unseen designs and saves computation time.
+Routing in integrated circuits (IC) design is often modeled as a pathfinding problem and has consistently represented one of the most challenging aspects due to its complexity and time-consuming nature. Even with state-of-the-art commercial CAD tools, routing complex designs can take hours, if not days. Consequently, there is a growing interest in applying machine learning-based approaches to overcome these challenges. In previous work, we introduced a novel reinforcement learning (RL) approach for routing. While this RL router outperformed the baseline, it was limited by poor generalizability, requiring a new policy to be trained from scratch for each problem. In this project, we aim to address this limitation by introducing a novel graph neural network (GNN) as the policy network for the RL router. This enhancement allows the agents to generalize their learned routing policies to new, unseen designs, reducing the computation time significantly.
 \end{abstract}
 
 \section{Introduction}
-IC routing is the process of connecting different electrical contact points (pins) on a chip with metallic wires. For example, the CPU and the memory in a computer chip must be connected with wires such that they can transfer data and do computing. We can model routing as a pathfinding problem, where the chip is abstracted into a 2-dimensional grid, and the pins, defined by (x, y) coordinates, sit on the nodes of this grid. The task is then to find paths between the specified nodes by traversing through the grid edges. In addition, each edge has a feature called the capacity, which represents the maximum number of wires permitted to use this edge. This constraint comes from the fact that in a real physical world, each wire has some thickness, and the number of wires allowed within a chip region is finite. If the usage of an edge exceeds its capacity, the edge is overflowed, which is highly undesirable. Hence, to find a optimal routing solution, we need to determine optimal paths to connect pins to minimize the total wirelength while maintaining zero edge overflow.
+IC routing involves connecting distinct electrical contact points (pins) on a chip using metallic wires. This process is crucial for the functionality of computer chips, as it enables data transfer and computing activities between components like the CPU and memory. We model routing as a pathfinding problem, representing the chip as a 2-dimensional grid. Pins, identified by their (x, y) coordinates, are placed on the grid's nodes. The objective is to establish paths connecting these nodes while navigating the grid edges. Each edge possesses a capacity feature, indicating the maximum number of permissible wires due to the physical constraints of wire thickness and finite space within a chip region. An optimal routing solution seeks to minimize total wire length and avoid edge overflow (usage of an edge exceeding its capacity), ensuring all connections are efficient and within capacity.
 
-A set of pins that need to be connected together is called a net, and during a routing process, there will be many nets that must be routed, they form a set called the netlist. For the rest of this proposal, we will use the term nodes interchangiablly with pins.
+Two important terminologies here are net and netlist. A net refers to a set of pins requiring connection, and a netlist is a set comprises multiple nets needing routing during the process. And for clarity, we will use the terms nodes and pins interchangeably throughout this proposal.
 
-In our previous work, we proposed an multi-agent RL router to solve the IC routing problem, where each agent is responsible for routing one net, and they take actions concurrently. We designed the agents to be homogeneous and fully-cooperative, and hence, they are governed by one super policy. The RL router was trained using proximal policy optimization (PPO) (REF), and was evaluated using benchmarks. The results showed the RL router can significantly outperform an A* baseline, however, the policy trained for one benchmark does not generalize to other unseen although very similar problems. After extensive analysis, we conclude the reason is because the policy neural network, consists of several full-connected (FC) layer, cannot learn rich information from the state encodings and thus has poor generalizability.
+In prior research, we introduced a multi-agent RL router to address the IC routing challenge. Each agent, tasked with routing one individual net, operated concurrently under a shared super policy, as we designed the agents to be homogeneous and fully-cooperative. Trained with proximal policy optimization (PPO) \cite{Schulman2017} and evaluated against benchmarks, this RL router demonstrated superior performance compared to the A* baseline. However, a limitation emerged: the policy, though effective for specific benchmarks, lacked generalizability for other, albeit similar, problems. We attributed this shortfall to the policy neural network's architecture, comprising several fully connected (FC) layers, which struggled to extract rich information from the state encodings.
 
-As opposed to a multi-layer perceptron (MLP), GNNs can generalize well when dealing with graphical data (REF), which is the case for routing problem that can be modeled as a grid graph. Therefore, in this project we propose a novel message-passing GNN architecture, which will be embedded into our developed RL router as the policy network. The GNN will take the routing grid graph from the environment as the state input and output actions. The aim is to enhance the router, such that it can generalize trained policies to unseen but similar problems, and hence, achieve significant improvement in terms of computation time.
+Contrastingly, graph neural networks (GNNs) exhibit robust generalization capabilities when processing graphical data \cite{Almasan2022,Wang2018}, aligning with the routing problem’s grid graph model. In this project, we introduce a novel message-passing GNN architecture integrated into the RL router’s policy network. The GNN accepts the routing grid graph from the environment as state input and determines actions accordingly. This innovation aims to bolster the RL router’s ability to generalize trained policy to problems not encountered during training, promising substantial reductions in computation time.
 
- 
 
 %Digital logic design involves three major stages: {\bf RTL}\footnote{Register transfer level}{\bf design}, {\bf synthesis}, and {\bf physical design}. An engineer first decides on the architecture of a digital circuit, and describes it with the help of a {\it hardware description language} (HDL). The described architecture is then fed into a CAD tool, which first synthesizes the design using different logic gates, and then maps the gates onto the chip canvas.
 
@@ -68,15 +67,19 @@ As opposed to a multi-layer perceptron (MLP), GNNs can generalize well when deal
 
 
 \section{Related work}
-Many works in the literature have verified the effectiveness of using GNN as the policy/value network of a RL model to promote generalization, given the environment that the agent is trying to solve can be modeled as a graph. However, to the best of our knowledge, no work has been directly done in terms of using RL as an approach of IC routing, and is combined with a GNN for generalizability.
+Numerous studies in existing literature have verified the effectiveness of employing Graph Neural Networks (GNNs) within the policy/value network of Reinforcement Learning (RL) models to enhance generalization, especially when the agent’s environment is graph-representable. However, to our knowledge, no existing study has directly explored the use of GNN equipped RL for IC routing.
 
-\cite{Liao2020} proposed an RL IC router that is trained by deep Q-network (DQN), i.e., using a feed-forward NN as the value network of the RL agent. However it suffers from the same limitation as our previous work, the results show no signs of generalization. In the work of \cite{Almasan2022}, the authors proposed a GNN as the value network of an RL agent trained by DQN, the solution achieved good generalization in the field of network routing, which is a similar problem as IC routing. This work is the main aspiration of our proposal. Similarly, \cite{Chen2023} and \cite{Wang2018} reported similar concepts of implementing GNN as the policy network of an RL model, where the problem can be abstracted into a graph. Additionally, \cite{Mirhoseini2021} and \cite{Yue2022} used GNN as the encoder layer to their RL policy and value networks. 
+\cite{Liao2020} introduced an RL IC router trained via a Deep Q-Network (DQN), utilizing a multi-layer perceptron (MLP) as the RL agent's value network. However, similar to our previous work, it showed a lack of generalization. Contrastingly, \cite{Almasan2022} incorporated a GNN as the value network of an RL agent, also trained by DQN. This approach manifested notable generalization capabilities in network routing—a field bearing similarities to IC routing—and serves as the principal inspiration for our current proposal. In parallel, both \cite{Chen2023} and \cite{Wang2018} echoed the integration of GNNs with RL models wherein the operational problems are graphs. Furthermore, \cite{Mirhoseini2021} and \cite{Yue2022} adopted GNNs as encoder layers for their respective RL policy and value networks.
+
     
 \section{Methodology}
+In this proposal, we limit our discussion to a simplified case of IC routing to facilitate the rapid development of a prototype. As the project advances, we will introduce additional complexities to refine and compact the model.
 
-In this proposal, we confine the model discussion to a very simply case of IC routing. This is to ensure that a prototype can be swiftly developed. As the project progresses, more complexities will be added such that the model becomes more compact.
 \subsection{Modeling IC routing as a grid graph}
-\autoref{fig:grid} shows a simple IC routing problem with just one net modeled as a grid graph. The gird has a size of 4x4, edge capacity of 1, and a net consists of two pins located at (0,0) and (3,3). We can observe that this graph has 16 nodes in total, and let us assume the RL agent starts at node (0,0), its target sits at (3,3). This graph is characterized by a node feature matrix $\mathbf{X}$, an edge feature matrix $\mathbf{E}$, and the adjacency matrix $\mathbf{A}$. Matrix $\mathbf{X}$ is of dimension 16x2, with each row representing a node's binary feature vector. The first element denotes the agent's presence, while the second indicates the existence of a target at the node. Both $\mathbf{E}$ and $\mathbf{A}$ are 16x16 matrices, with $\mathbf{E}$ encapsulating the scalar capacities of the edges. 
+\autoref{fig:grid} illustrates a simplified IC routing problem, represented as a grid graph with a single net. The grid, sized 4x4 and with an edge capacity of 1, contains a net composed of two pins positioned at coordinates (0,0) and (3,3). The grid comprises 16 nodes in total. Assuming the RL agent initiates its path at node (0,0), its destination is fixed at (3,3). The grid is defined by a node feature matrix $\mathbf{X}$, an edge feature matrix $\mathbf{E}$, and the adjacency matrix $\mathbf{A}$.
+
+Matrix $\mathbf{X}$, with dimensions of 16x2, consists of rows that represent the binary feature vectors of nodes. The first element of each row signifies the presence of the RL agent, while the second element indicates whether a target resides at that specific node. Both $\mathbf{E}$ and $\mathbf{A}$ are 16x16 matrices. In particular, $\mathbf{E}$ encapsulates the scalar capacities of the edges connecting the nodes.
+
 
 \begin{figure}[h!]
     \centering
@@ -86,41 +89,49 @@ In this proposal, we confine the model discussion to a very simply case of IC ro
 \end{figure}
 
 \subsection{GNN architectural design}
-The GNN will utilize the message passing mechanism. It takes $\mathbf{X}$, $\mathbf{E}$, and $\mathbf{A}$ from the RL environment as input, and outputs the probability distribution of all the actions. The message network will be implemented by MLP, the messages will be aggregated by element-wise summation, and the node states will be updated by a gated recurrent unit (GRU). After the messaging passing stage, the node states will be feed into another MLP ended with a softmax layer to produce action probability distribution. 
+The GNN employs a message-passing mechanism, processing inputs of matrices $\mathbf{X}$, $\mathbf{E}$, and $\mathbf{A}$ from the RL environment and yielding the probability distribution of all potential actions. An MLP implements the message network, with messages being aggregated through element-wise summation. Node states are updated using a Gated Recurrent Unit (GRU). 
 
-Architecture of GNN can't reply on the graph topology. Like \#nodes. We want the GNN to generalize to graphs of any size. 
+Following the message-passing phase, the updated node states are fed into another MLP, culminating in a softmax layer that generates the action probability distribution.
+
+The GNN architecture cannot reply on the graph topology, e.g., the number of nodes. We want the GNN to generalize to graphs of any size. 
 
 \subsection{RL policy training}
-The proposed GNN will be embedded into our RL router as its policy network, which will be trained using PPO with RLlib. The parameters of the GNN will be updated by stochastic gradient descent, guided by the value feedback from the value network. 
+We plan to integrate the proposed GNN into our RL router, serving as its policy network. The training will be conducted using PPO with RLlib. The GNN's parameters will be refined through stochastic gradient descent, guided by feedback from the value network.
+
 
 %TODO: Briefly explain what is multi-agent RL and its advantages for our given problem. Also mention the paper which used a GNN as the policy network for the RL agent \cite{Almasan2022}. Also discuss the overall architecture of the GNN that we're going to use, and mention which libraries we're using (i.e., PyTorch, PyG, and RLLib). Adding a figure depicting the routing problem in a grid would also be very helpful. Also, don't forget to come up with a rough timeline and replace the 'X' values below!
 
-\subsection{Project timeline}
+\subsection{Project Timeline}
 \begin{itemize}
-    \item Extended literature review (5 days)
-    \item Designing the GNN prototype, combing with the RL router, and training on a simple benchmark (14 days)
-    \item Testing the updated RL agent on benchmarks both similar to and different from the training benchmark (1 day)
-    \item Analyzing the results and getting a measure of the generalizability (3 days)
-    \item (bonus) Scaling up the model and design to support multi-agent concurrent routing (7 days)
-    \item Writing the project report (14 days)
+    \item Conduct an extended literature review to gather comprehensive insights and foundational knowledge (5 days).
+    \item Develop the GNN prototype, integrate it with the RL router, and initiate training on a preliminary benchmark (14 days).
+    \item Evaluate the enhanced RL router’s performance on a variety of benchmarks, including those analogous and distinct from the training set (1 day).
+    \item Analyze the outcomes to assess the model's generalization capabilities and performance metrics, making figures and tables (3 days).
+    \item (Bonus) Expand the model and its design to accommodate multi-agent concurrent routing, enhancing scalability and efficiency (7 days).
+    \item Writing up the report (14 days).
 \end{itemize}
+
     
 \section{Experiments}
-We will implement a baseline MLP policy network, and train it with a simple benchmark.
+We will construct a baseline using an MLP policy network and train it on a simple benchmark to facilitate a comparative analysis.
 
-\subsection{Comparing training efficiency}
-In this experiment, we will train the GNN equipped router as well as the baseline router, both using a same benchmark. We will compare their plots of reward versus training iteration. The goal is to see how well the GNN equipped router trains comparing to the baseline. According to \cite{Wang2018}, we expect the new design will have similar or even better training efficiency.
+\subsection{Comparing Training Efficiency}
+This experiment aims to compare the training efficiency of the GNN-equipped router with the baseline router, both trained on the same benchmark. We will assess their performance by examining the plots of reward versus training iterations. The objective is to evaluate the training efficiency of the GNN-equipped router in comparison to the baseline. As suggested by \cite{Wang2018}, we anticipate that the new design will demonstrate comparable, if not superior, training efficiency.
 
-\subsection{Comparing zero-shot performance} \label{m:0}
-In this experiment, we will use the two zero-shot policies obtained during the previous experiment (one from the new design, one from the baseline) to run inference on several unseen benchmarks, which are netlists with canvas sizes, number of nets, and total number of pins per net similar to that of the training benchmark. We would then compare the results in terms of rewards, and solution qualities. We expect the new design would outperform the baseline.
+\subsection{Comparing Zero-Shot Performance} \label{m:0}
+We will employ the zero-shot policies derived from the previous experiment to perform inference on several unseen benchmarks. These benchmarks will feature netlists with canvas sizes, numbers of nets, and total numbers of pins per net that resemble the training benchmark. The comparison criteria will include rewards and routing solution quality (wire length, overflow). We predict that the new GNN-equipped design will surpass the baseline in performance.
 
-\subsection{Comparing fine-tuning performance}
-For this experiment, we will first run zero-shot inference on benchmarks with different number of nets, chip canvas size, and number of pins per net than the training benchmark. The goal is to see how well can the GNN scale to more complicated problems. We expect the zero-shot performance to be less sound than the results of the previous experiment, and hence, it is likely the policies need fine-tuning. We will fine-tune the polices for the same number of iterations, and compare the results in terms of rewards, and solution qualities. We expect the new design to do better than the baseline.
+\subsection{Comparing Fine-Tuning Performance}
+This experiment is designed to evaluate the scalability of the GNN to more complex problems. We will initiate zero-shot inference on benchmarks characterized by different numbers of nets, chip canvas sizes, and numbers of pins per net than the training benchmark. We anticipate a decrease in zero-shot performance compared to the results of \autoref{m:0}, indicating a likely need for policy fine-tuning.
+
+Both the new design and baseline policies will undergo fine-tuning for an equal number of iterations. We will compare their performances based on rewards and solution quality metrics. Our expectation leans towards the new GNN-equipped design demonstrating superior adaptability and performance after fine-tuning.
 
 \begin{figure}[h!]
     \centering
     \begin{tikzpicture}
         \begin{axis}[
+            width=0.4\textwidth,
+            height=0.4\textwidth, 
             axis lines = left,
             xlabel = Iteration,
             ylabel = Total loss,
