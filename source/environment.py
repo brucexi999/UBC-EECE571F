@@ -15,6 +15,8 @@ class SimpleEnv(Env):
         self.width = width
         self.macros = macros
         self.edge_capacity = edge_capacity.copy()
+        self.initial_capacity = edge_capacity.copy()
+        self.initial_capacity.setflags(write=False)
         self.max_capacity = np.max(self.edge_capacity)
         self.agent_position = np.array([0, 0])
         self.goal_position = np.array([self.length - 1, self.width - 1])
@@ -173,8 +175,9 @@ class SimpleEnv(Env):
         plt.show()
 
     def reset(self):
-        self.initialize_mat()
         self.agent_position = np.array([0, 0])
+        self.edge_capacity = self.initial_capacity.copy()
+        self.initialize_mat()
         node_feature_mat = self.compute_node_feature_mat()
         self.path_x = [0]
         self.path_y = [0]
