@@ -5,46 +5,149 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from gym import Env
-from gym.spaces import Discrete, MultiDiscrete
+from gym.spaces import Discrete, Dict, Box
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 
 class SimpleEnv(Env):
-    def __init__(self, length: int, width: int, edge_capacity: np.ndarray, max_step: int = 10):
+    def __init__(self, length: int, width: int, macros: list, edge_capacity: np.ndarray, max_step: int = 10):
         self.length = length
         self.width = width
+        self.macros = macros
         self.edge_capacity = edge_capacity.copy()
+        self.max_capacity = np.max(self.edge_capacity)
         self.agent_position = np.array([0, 0])
         self.goal_position = np.array([self.length - 1, self.width - 1])
+        self.num_node = self.length * self.width
+        self.node_feature_dimension = 2  # binary [h1, h2], h1 = agent's presence, h2 = goal's presence
+        self.edge_feature_dimension = 1  # scalar capacity
 
         self.action_space = Discrete(4)
-        self.observation_space = MultiDiscrete([self.length, self.width])
+        self.observation_space = Dict({
+            'node_feature_mat': Box(low=0, high=1, shape=(self.num_node, self.node_feature_dimension), dtype=np.float32),
+            'edge_feature_mat': Box(low=0, high=self.max_capacity, shape=(self.num_node, self.num_node), dtype=np.float32),
+            'adj_max': Box(low=0, high=1, shape=(self.num_node, self.num_node), dtype=np.uint8)
+        })
 
+        self.initialize_mat()
         self.path_x = [0]
         self.path_y = [0]
 
-    def step(self, action):
-        if action == 0:  # Up
-            if ((self.agent_position[1] + 1) <= self.width - 1):  # if within the bound, then accept the move
-                self.agent_position[1] = self.agent_position[1] + 1
-        elif action == 1:  # Down
-            if ((self.agent_position[1] - 1) >= 0):
-                self.agent_position[1] = self.agent_position[1] - 1
-        elif action == 2:  # Right
-            if ((self.agent_position[0] + 1) <= self.length - 1):
-                self.agent_position[0] = self.agent_position[0] + 1
-        elif action == 3:  # Left
-            if ((self.agent_position[0] - 1) >= 0):
-                self.agent_position[0] = self.agent_position[0] - 1
+    def initialize_mat(self):
+        """Initialize the adjacency and edge feature matrix"""
+        self.adj_mat = np.zeros(self.num_node, self.num_node)
+        self.edge_feature_mat = np.zeros(self.num_node, self.num_node)
 
+        for i in range(self.length):
+            for j in range(self.width):
+                node_index = i * self.length + j
+
+                if j < self.width - 1:  # up
+                    self.adj_mat[node_index, node_index + self.length] = 1
+                    self.edge_feature_mat[node_index, node_index + self.length] = self.edge_capacity[i][j][0]
+
+                if j > 0:  # down
+                    self.adj_mat[node_index, node_index - self.length] = 1
+                    self.edge_feature_mat[node_index, node_index - self.length] = self.edge_capacity[i][j][2]
+
+                if i < self.length - 1:  # right
+                    self.adj_mat[node_index, node_index + 1] = 1
+                    self.edge_feature_mat[node_index, node_index + 1] = self.edge_capacity[i][j][1]
+
+                if i > 0:  # left
+                    self.adj_mat[node_index, node_index - 1] = 1
+                    self.edge_feature_mat[node_index, node_index - 1] = self.edge_capacity[i][j][3]
+
+    def update_edge_feature_mat(self, agent_position: np.ndarray, action: int):
+        """Update the edge feature matrix after each step"""
+        source_node_idx = agent_position[0] * self.length + agent_position[1]
+        new_position = self.compute_new_position(agent_position, action)
+        target_node_idx = new_position[0] * self.length + new_position[1]
+        self.edge_feature_mat[source_node_idx, target_node_idx] += -1
+        self.edge_feature_mat[target_node_idx, source_node_idx] += -1
+
+    def step(self, action):
+        if self.check_move_validity(self.agent_position, action):
+            self.update_capacity(self.agent_position, action)
+            self.update_edge_feature_mat(self.agent_position, action)
+            self.agent_position = np.array(list(self.compute_new_position(self.agent_position, action)))
+            # Update the agent's path
+            self.path_x.append(self.agent_position[0])
+            self.path_y.append(self.agent_position[1])
+
+        node_feature_mat = self.compute_node_feature_mat()
         done = np.array_equal(self.agent_position, self.goal_position)
         reward = 100 if done else -1
 
-        # Update the agent's path
-        self.path_x.append(self.agent_position[0])
-        self.path_y.append(self.agent_position[1])
+        observation = {
+            'node_feature_mat': node_feature_mat,
+            'edge_feature_mat': self.edge_feature_mat,
+            'adj_max': self.adj_mat
+        }
 
-        return self.agent_position, reward, done, {}
+        return observation, reward, done, {}
+
+    def update_capacity(self, agent_position: np.ndarray, action: int):
+        """
+        Update the edge capacities after taking an action
+        """
+
+        # reduce the capacity of the current node
+        self.edge_capacity[agent_position[0]][agent_position[1]][action] += -1
+
+        # reduce the capacity of the next node's corresponding edge
+        new_node = self.compute_new_position(agent_position, action)
+        corresponding_edge = (action + 2) % 4
+        self.edge_capacity[new_node[0]][new_node[1]][corresponding_edge] += -1
+
+    def compute_new_position(self, agent_position: np.ndarray, action: int):
+        """
+        Compute new agent positions
+        """
+        if action == 0:  # up
+            new_position = (agent_position[0], agent_position[1]+1)
+        elif action == 1:  # right
+            new_position = (agent_position[0]+1, agent_position[1])
+        elif action == 2:  # down
+            new_position = (agent_position[0], agent_position[1]-1)
+        elif action == 3:  # left
+            new_position = (agent_position[0]-1, agent_position[1])
+
+        return new_position
+
+    def check_move_validity(self, agent_position: np.ndarray, action: int):
+        """
+        Check whether a move is valid by checking:
+        (1) the edge the move is about to use has capacity greater than 0
+        (2) the position after the move is not within macro regions
+        (3) the position after the move in within in the routing canvas
+        Returns True if the move is valid, False if invalid
+        """
+        # capacity of the 4 neighboring edges of the current agent position
+        node_capacity = self.edge_capacity[agent_position[0]][agent_position[1]]
+
+        new_position = self.compute_new_position(agent_position, action)
+
+        macro_flag = new_position not in self.macros
+        bound_flag = new_position[0] in range(self.length) and new_position[1] in range(self.width)
+        capacity_flag = node_capacity[action] > 0
+
+        valid = macro_flag and bound_flag and capacity_flag
+
+        return valid
+
+    def compute_node_feature_mat(self):
+        # initialize a matrix with all 0
+        node_feature_mat = np.zeros((self.num_node, self.node_feature_dimension))
+
+        # convert the agent position and the goal position to the node feature matrix
+        agent_index = self.agent_position[0]*self.length+self.agent_position[1]
+        node_feature_mat[agent_index, 0] = 1
+
+        goal_index = self.goal_position[0]*self.length+self.goal_position[1]
+        node_feature_mat[goal_index, 1] = 1
+
+        return node_feature_mat
 
     def render(self):
         '''
@@ -70,10 +173,17 @@ class SimpleEnv(Env):
         plt.show()
 
     def reset(self):
+        self.initialize_mat()
         self.agent_position = np.array([0, 0])
+        node_feature_mat = self.compute_node_feature_mat()
         self.path_x = [0]
         self.path_y = [0]
-        return self.agent_position
+        observation = {
+            'node_feature_mat': node_feature_mat,
+            'edge_feature_mat': self.edge_feature_mat,
+            'adj_max': self.adj_mat
+        }
+        return observation
 
 
 class RtGridEnv(MultiAgentEnv):

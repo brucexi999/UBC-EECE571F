@@ -54,8 +54,8 @@ class MPNN(nn.Module):
 
 
 '''# Example usage
-node_features = torch.tensor([[1, 0], [0, 0], [0, 1], [0, 0]], dtype=torch.float32)  # 16 nodes, each with 2 features
-adjacency_matrix = torch.tensor([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])  # 16x16 edges, each with a scalar feature
+node_features = torch.tensor([[1, 0], [0, 0], [0, 1], [0, 0]], dtype=torch.float32)  # 4 nodes, each with 2 features
+adjacency_matrix = torch.tensor([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])  # 4x4 edges, each with a scalar feature
 edge_features = adjacency_matrix
 
 
