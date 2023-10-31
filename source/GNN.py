@@ -3,11 +3,13 @@ import torch.nn as nn
 
 
 class MPNN(nn.Module):
-    def __init__(self, node_feature_dimension: int, action_space_dimension: int):
+    def __init__(self, node_feature_dimension: int, action_space_dimension: int, nn_type: str):
         super(MPNN, self).__init__()
 
         # Message-passing network
         # TODO: how to make sure the architecture can generalize and does not depend on the input graph's topology?
+        self.nn_type = nn_type
+
         self.message = nn.Sequential(
             nn.Linear(node_feature_dimension * 2 + 1, node_feature_dimension),
             nn.ReLU()
@@ -17,10 +19,11 @@ class MPNN(nn.Module):
         self.update = nn.GRUCell(node_feature_dimension, node_feature_dimension)
 
         # Readout network
-        self.readout = nn.Sequential(
+        self.readout_policy = nn.Sequential(
             nn.Linear(node_feature_dimension, action_space_dimension),
             nn.Softmax(dim=0)
         )
+        self.readout_value = nn.Linear(node_feature_dimension, 1)
 
     def forward(self, node_features: torch.Tensor, edge_features: torch.Tensor, adjacency_matrix: torch.Tensor):
         # Identify the source and target nodes for each edge
@@ -48,9 +51,12 @@ class MPNN(nn.Module):
 
         # Readout
         node_feature_sum = updated_node_features.sum(dim=0)
-        action_probabilities = self.readout(node_feature_sum)
-
-        return action_probabilities
+        if (self.nn_type == 'policy'):
+            action_probabilities = self.readout_policy(node_feature_sum)
+            return action_probabilities
+        elif (self.nn_type == 'value'):
+            q_values = self.readout_value(node_feature_sum)
+            return q_values
 
 
 '''# Example usage
