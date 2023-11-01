@@ -172,3 +172,10 @@ draft.ipynb
 
 simple_env/
 checkpoint/
+/.idea/.gitignore
+/.idea/git_toolbox_prj.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/UBC-EECE571F.iml
+/.idea/vcs.xml

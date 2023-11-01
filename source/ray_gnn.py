@@ -12,8 +12,7 @@ from GNN import MPNN
 
 # Custom ray-compatible GNN-based model
 class MPNNModel(TorchModelV2, nn.Module):
-    def __init(self, obs_space: gym.spaces.Space, action_space: gym.spaces.Space, num_outputs: int, model_config: dict,
-               name: str):
+    def __init(self, obs_space: gym.spaces.Space, action_space: gym.spaces.Space, num_outputs: int, model_config: dict, name: str):
         TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
         nn.Module.__init__(self)
 
@@ -55,5 +54,5 @@ class MPNNModel(TorchModelV2, nn.Module):
 
     @override(ModelV2)
     def value_function(self):
-        assert self._cur_value is not None, "ERROR: Must call `forward()` first"
-        return self._cur_value
+        assert self._cur_values is not None, "ERROR: Must call `forward()` first"
+        return self._cur_values
