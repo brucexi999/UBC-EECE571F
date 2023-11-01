@@ -51,12 +51,12 @@ class MPNN(nn.Module):
 
         # Readout
         node_feature_sum = updated_node_features.sum(dim=0)
-        if (self.nn_type == 'policy'):
+        if (self.nn_type == "policy"):
             action_probabilities = self.readout_policy(node_feature_sum)
             return action_probabilities
-        elif (self.nn_type == 'value'):
-            q_values = self.readout_value(node_feature_sum)
-            return q_values
+        elif (self.nn_type == "value"):
+            v_value = self.readout_value(node_feature_sum)
+            return v_value
 
 
 '''# Example usage

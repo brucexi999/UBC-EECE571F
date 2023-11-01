@@ -4,8 +4,8 @@ import heapq
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from gym import Env
-from gym.spaces import Discrete, Dict, Box
+from gymnasium import Env
+from gymnasium.spaces import Discrete, Dict, Box, MultiDiscrete
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 
@@ -18,6 +18,8 @@ class SimpleEnv(Env):
         self.initial_capacity = edge_capacity.copy()
         self.initial_capacity.setflags(write=False)
         self.max_capacity = np.max(self.edge_capacity)
+        self.max_step = max_step
+        self.step_counter = 0
         self.agent_position = np.array([0, 0])
         self.goal_position = np.array([self.length - 1, self.width - 1])
         self.num_node = self.length * self.width
@@ -36,27 +38,28 @@ class SimpleEnv(Env):
         self.path_y = [0]
 
     def initialize_mat(self):
-        """Initialize the adjacency and edge feature matrix"""
-        self.adj_mat = np.zeros(self.num_node, self.num_node)
-        self.edge_feature_mat = np.zeros(self.num_node, self.num_node)
+        """Initialize the node feature, adjacency and edge feature matrix"""
+        self.node_feature_mat = np.zeros((self.num_node, self.node_feature_dimension))
+        self.adj_mat = np.zeros((self.num_node, self.num_node))
+        self.edge_feature_mat = np.zeros((self.num_node, self.num_node))
 
-        for i in range(self.length):
-            for j in range(self.width):
+        for i in range(self.width):
+            for j in range(self.length):
                 node_index = i * self.length + j
 
-                if j < self.width - 1:  # up
+                if i < self.width - 1:  # up
                     self.adj_mat[node_index, node_index + self.length] = 1
                     self.edge_feature_mat[node_index, node_index + self.length] = self.edge_capacity[i][j][0]
 
-                if j > 0:  # down
+                if i > 0:  # down
                     self.adj_mat[node_index, node_index - self.length] = 1
                     self.edge_feature_mat[node_index, node_index - self.length] = self.edge_capacity[i][j][2]
 
-                if i < self.length - 1:  # right
+                if j < self.length - 1:  # right
                     self.adj_mat[node_index, node_index + 1] = 1
                     self.edge_feature_mat[node_index, node_index + 1] = self.edge_capacity[i][j][1]
 
-                if i > 0:  # left
+                if j > 0:  # left
                     self.adj_mat[node_index, node_index - 1] = 1
                     self.edge_feature_mat[node_index, node_index - 1] = self.edge_capacity[i][j][3]
 
@@ -68,21 +71,36 @@ class SimpleEnv(Env):
         self.edge_feature_mat[source_node_idx, target_node_idx] += -1
         self.edge_feature_mat[target_node_idx, source_node_idx] += -1
 
+    def update_node_feature_mat(self):
+        # set all features to 0
+        self.node_feature_mat.fill(0)
+
+        # convert the agent position and the goal position to the node feature matrix
+        agent_index = self.agent_position[0]*self.length+self.agent_position[1]
+        self.node_feature_mat[agent_index, 0] = 1
+
+        goal_index = self.goal_position[0]*self.length+self.goal_position[1]
+        self.node_feature_mat[goal_index, 1] = 1
+
     def step(self, action):
         if self.check_move_validity(self.agent_position, action):
             self.update_capacity(self.agent_position, action)
             self.update_edge_feature_mat(self.agent_position, action)
             self.agent_position = np.array(list(self.compute_new_position(self.agent_position, action)))
+            self.update_node_feature_mat()
             # Update the agent's path
             self.path_x.append(self.agent_position[0])
             self.path_y.append(self.agent_position[1])
 
-        node_feature_mat = self.compute_node_feature_mat()
         done = np.array_equal(self.agent_position, self.goal_position)
         reward = 100 if done else -1
 
+        self.step_counter += 1
+        if self.step_counter >= self.max_step:
+            done = True
+
         observation = {
-            'node_feature_mat': node_feature_mat,
+            'node_feature_mat': self.node_feature_mat,
             'edge_feature_mat': self.edge_feature_mat,
             'adj_max': self.adj_mat
         }
@@ -138,19 +156,6 @@ class SimpleEnv(Env):
 
         return valid
 
-    def compute_node_feature_mat(self):
-        # initialize a matrix with all 0
-        node_feature_mat = np.zeros((self.num_node, self.node_feature_dimension))
-
-        # convert the agent position and the goal position to the node feature matrix
-        agent_index = self.agent_position[0]*self.length+self.agent_position[1]
-        node_feature_mat[agent_index, 0] = 1
-
-        goal_index = self.goal_position[0]*self.length+self.goal_position[1]
-        node_feature_mat[goal_index, 1] = 1
-
-        return node_feature_mat
-
     def render(self):
         '''
         Plot the agent's path
@@ -175,14 +180,15 @@ class SimpleEnv(Env):
         plt.show()
 
     def reset(self):
+        self.step_counter = 0
         self.agent_position = np.array([0, 0])
         self.edge_capacity = self.initial_capacity.copy()
         self.initialize_mat()
-        node_feature_mat = self.compute_node_feature_mat()
+        self.update_node_feature_mat()
         self.path_x = [0]
         self.path_y = [0]
         observation = {
-            'node_feature_mat': node_feature_mat,
+            'node_feature_mat': self.node_feature_mat,
             'edge_feature_mat': self.edge_feature_mat,
             'adj_max': self.adj_mat
         }
