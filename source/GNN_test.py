@@ -9,9 +9,9 @@ edge_features = adjacency_matrix
 policyNN = MPNN(node_feature_dimension=2, action_space_dimension=4, nn_type="policy")
 
 # Forward pass
-action_probabilities = policyNN(node_features, edge_features, adjacency_matrix)
+policy_logits = policyNN(node_features, edge_features, adjacency_matrix)
 
-print(action_probabilities)
+print(policy_logits)
 
 # Create an instance of the MPNN model as policy NN
 valueNN = MPNN(node_feature_dimension=2, action_space_dimension=4, nn_type="value")
