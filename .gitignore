@@ -166,9 +166,11 @@ cython_debug/
 *.fls
 *.out
 *.gz
+*.json
 
 draft.py
 draft.ipynb
+
 
 simple_env/
 checkpoint/
