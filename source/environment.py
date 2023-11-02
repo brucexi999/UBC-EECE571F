@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import torch
 import heapq
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -29,7 +30,7 @@ class SimpleEnv(Env):
         self.action_space = Discrete(4)
         self.observation_space = Dict({
             'node_feature_mat': Box(low=0, high=1, shape=(self.num_node, self.node_feature_dimension), dtype=np.float32),
-            'edge_feature_mat': Box(low=0, high=self.max_capacity, shape=(self.num_node, self.num_node), dtype=np.float32),
+            'edge_feature_mat': Box(low=0, high=self.max_capacity, shape=(self.num_node, self.num_node), dtype=np.uint8),
             'adj_max': Box(low=0, high=1, shape=(self.num_node, self.num_node), dtype=np.uint8)
         })
 
@@ -65,9 +66,9 @@ class SimpleEnv(Env):
 
     def update_edge_feature_mat(self, agent_position: np.ndarray, action: int):
         """Update the edge feature matrix after each step"""
-        source_node_idx = agent_position[0] * self.length + agent_position[1]
+        source_node_idx = agent_position[1] * self.length + agent_position[0]
         new_position = self.compute_new_position(agent_position, action)
-        target_node_idx = new_position[0] * self.length + new_position[1]
+        target_node_idx = new_position[1] * self.length + new_position[0]
         self.edge_feature_mat[source_node_idx, target_node_idx] += -1
         self.edge_feature_mat[target_node_idx, source_node_idx] += -1
 
@@ -76,10 +77,10 @@ class SimpleEnv(Env):
         self.node_feature_mat.fill(0)
 
         # convert the agent position and the goal position to the node feature matrix
-        agent_index = self.agent_position[0]*self.length+self.agent_position[1]
+        agent_index = self.agent_position[1]*self.length+self.agent_position[0]
         self.node_feature_mat[agent_index, 0] = 1
 
-        goal_index = self.goal_position[0]*self.length+self.goal_position[1]
+        goal_index = self.goal_position[1]*self.length+self.goal_position[0]
         self.node_feature_mat[goal_index, 1] = 1
 
     def step(self, action):
@@ -100,9 +101,9 @@ class SimpleEnv(Env):
             done = True
 
         observation = {
-            'node_feature_mat': self.node_feature_mat,
-            'edge_feature_mat': self.edge_feature_mat,
-            'adj_max': self.adj_mat
+            'node_feature_mat': torch.from_numpy(self.node_feature_mat).float(),
+            'edge_feature_mat': torch.from_numpy(self.edge_feature_mat).int(),
+            'adj_max': torch.from_numpy(self.adj_mat).int()
         }
 
         return observation, reward, done, {}
@@ -188,9 +189,9 @@ class SimpleEnv(Env):
         self.path_x = [0]
         self.path_y = [0]
         observation = {
-            'node_feature_mat': self.node_feature_mat,
-            'edge_feature_mat': self.edge_feature_mat,
-            'adj_max': self.adj_mat
+            'node_feature_mat': torch.from_numpy(self.node_feature_mat).float(),
+            'edge_feature_mat': torch.from_numpy(self.edge_feature_mat).int(),
+            'adj_max': torch.from_numpy(self.adj_mat).int()
         }
         return observation
 

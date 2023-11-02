@@ -16,6 +16,7 @@ for ep in range(num_episodes):
     done = False
     while True:
         action = env.action_space.sample()
+        print(action)
         new_obs, reward, done, info = env.step(action)
         print(new_obs)
         total_reward += reward
