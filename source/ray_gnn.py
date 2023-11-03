@@ -7,6 +7,7 @@ from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.utils.annotations import override
 from GNN import MPNN
+import logging
 
 
 # Custom ray-compatible GNN-based model
@@ -16,10 +17,10 @@ class MPNNModel(TorchModelV2, nn.Module):
         nn.Module.__init__(self)
 
         # General specs
-        self.n_agents = 1
-        self.node_features_dim = model_config['node_features_dim']
-        self.edge_features_dim = model_config['edge_features_dim']  # Not used
-        self.action_space_dim = model_config['action_space_dim']
+        self.n_agents = 1  # Not used
+        self.node_features_dim = model_config["custom_model_config"]['node_features_dim']
+        self.edge_features_dim = model_config["custom_model_config"]['edge_features_dim']  # Not used
+        self.action_space_dim = model_config["custom_model_config"]['action_space_dim']
         self._cur_values = None
         # TODO: Optimize above code & add more!
 
@@ -39,7 +40,7 @@ class MPNNModel(TorchModelV2, nn.Module):
     def forward(self, input_dict: dict, state: list[torch.Tensor], seq_lens: torch.Tensor) -> tuple[torch.Tensor, list[torch.Tensor]]:
         # Input observation (must be a dictionary containing node & edge features, and adj. matrix)
         obs = input_dict["obs"]
-
+        #logging.critical("YOYOYOYOYOYOYO{}".format(obs["node_feature_mat"].shape))
         # Decompose the observation into its different matrices
         node_features = obs["node_feature_mat"]
         edge_features = obs["edge_feature_mat"]
