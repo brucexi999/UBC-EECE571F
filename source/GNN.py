@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import logging
 
 
 class MPNN(nn.Module):
@@ -25,16 +26,17 @@ class MPNN(nn.Module):
 
     def forward(self, node_features: torch.Tensor, edge_features: torch.Tensor, adjacency_matrix: torch.Tensor):
         T = 3
+        self.num_batches = adjacency_matrix.shape[0]
+        self.num_nodes_per_batch = adjacency_matrix.shape[1]
+        batch_indices, source_indices, target_indices = adjacency_matrix.nonzero(as_tuple=True)
         for _ in range(T):
             # Identify the source and target nodes for each edge
             # This is the indices for individual batches, since all batches have the same adj mat,
             # the computation is done on batch #0.
-            self.num_batches = adjacency_matrix.shape[0]
-            self.num_nodes_per_batch = adjacency_matrix.shape[1]
-            batch_indices, source_indices, target_indices = adjacency_matrix.nonzero(as_tuple=True)
+
             #print("batch_indices: ", batch_indices)
             #print("source_indices: ", source_indices)
-            print("target_indices: ", target_indices)
+            #print("target_indices: ", target_indices)
             # Gather the source and target node features for all edges
             source_features = node_features[batch_indices, source_indices]
             #print("source_features: ", source_features)
@@ -50,20 +52,22 @@ class MPNN(nn.Module):
             messages = self.message(combined_features)
             # Separate the batches out
             batched_messages = messages.reshape(self.num_batches, self.num_nodes_per_batch*2, self.node_feature_dimension)
-            print("messages: ", messages)
-            print("batched messages: ", batched_messages)
+            logging.critical("batched_messages:\n", batched_messages)
+            #print("messages: ", messages)
+            #print("batched messages: ", batched_messages)
 
             # Aggregate messages by summing them for each target node
             aggregated_messages = self.aggregation(target_indices, batched_messages)
-            print("aggregated message: ", aggregated_messages)
+            logging.critical("aggregated message:\n", aggregated_messages)
 
-            # Update node features with a GRU
-            # TODO: fix batch here
-            node_features = self.update(aggregated_messages, node_features)
-            print("updated node features: ", node_features)
+            # Update node features with a GRU, loop through each batch
+            for batch in range(node_features.shape[0]):
+                node_features[batch] = self.update(aggregated_messages[batch], node_features[batch])
+            logging.critical("updated node features:\n", node_features)
 
         # Readout
-        node_feature_sum = node_features.sum(dim=0)
+        node_feature_sum = node_features.sum(dim=1)
+        print(node_feature_sum)
         if (self.nn_type == "policy"):
             policy_logits = self.readout_policy(node_feature_sum)
             return policy_logits

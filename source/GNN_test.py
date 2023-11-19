@@ -15,7 +15,7 @@ policyNN = MPNN(node_feature_dimension=2, action_space_dimension=4, nn_type="pol
 # Forward pass
 policy_logits = policyNN(node_features, edge_features, adjacency_matrix)
 
-#print(policy_logits)
+print(policy_logits)
 
 # Create an instance of the MPNN model as policy NN
 #valueNN = MPNN(node_feature_dimension=2, action_space_dimension=4, nn_type="value")
