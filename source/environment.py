@@ -5,15 +5,16 @@ import heapq
 import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from gymnasium import Env
-from gymnasium.spaces import Discrete, Dict, Box, MultiDiscrete
+from gym import Env
+from gym.spaces import Discrete, Dict, Box, MultiDiscrete
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
 
 class SimpleEnv(Env):
-    def __init__(self, length: int, width: int, macros: list, edge_capacity: np.ndarray, max_step: int = 10):
+    def __init__(self, length: int, width: int, nets:list, macros: list, edge_capacity: np.ndarray, max_step: int = 10):
         self.length = length
         self.width = width
+        self.nets = nets
         self.macros = macros
         self.edge_capacity = edge_capacity.copy()
         self.initial_capacity = edge_capacity.copy()
@@ -21,8 +22,8 @@ class SimpleEnv(Env):
         self.max_capacity = np.max(self.edge_capacity)
         self.max_step = max_step
         self.step_counter = 0
-        self.agent_position = np.array([0, 0])
-        self.goal_position = np.array([self.length - 1, self.width - 1])
+        self.agent_position = np.array(self.nets[0])
+        self.goal_position = np.array(self.nets[-1])
         self.num_node = self.length * self.width
         self.node_feature_dimension = 2  # binary [h1, h2], h1 = agent's presence, h2 = goal's presence
         self.edge_feature_dimension = 1  # scalar capacity
@@ -99,9 +100,10 @@ class SimpleEnv(Env):
         self.step_counter += 1
         if self.step_counter >= self.max_step:
             done = True
-            truncated = True
+            #truncated = True
         else:
-            truncated = False
+            #truncated = False
+            pass
 
         observation = {
             'node_feature_mat': torch.from_numpy(self.node_feature_mat).float(),
@@ -109,7 +111,7 @@ class SimpleEnv(Env):
             'adj_max': torch.from_numpy(self.adj_mat).int()
         }
 
-        return observation, reward, done, truncated, {}
+        return observation, reward, done, {}
 
     def update_capacity(self, agent_position: np.ndarray, action: int):
         """
@@ -183,7 +185,7 @@ class SimpleEnv(Env):
         # Show the plot
         plt.show()
 
-    def reset(self, seed=None, options=None):
+    def reset(self):
         self.step_counter = 0
         self.agent_position = np.array([0, 0])
         self.edge_capacity = self.initial_capacity.copy()
@@ -196,7 +198,7 @@ class SimpleEnv(Env):
             'edge_feature_mat': torch.from_numpy(self.edge_feature_mat).int(),
             'adj_max': torch.from_numpy(self.adj_mat).int()
         }
-        return observation, {}
+        return observation
 
 
 class RtGridEnv(MultiAgentEnv):
