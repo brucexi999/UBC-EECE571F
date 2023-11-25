@@ -18,8 +18,8 @@ print("adjacency_matrix shape:", adjacency_matrix.shape)  # Should be [128, 4, 4
 edge_features = adjacency_matrix
 
 # Create an instance of the MPNN model as policy NN
-policyNN = MPNN(node_feature_dimension=2, action_space_dimension=4, nn_type="policy", diameter=1)
-new_policyNN = new_MPNN(node_feature_dimension=2, action_space_dimension=4, nn_type="policy", diameter=1)
+policyNN = MPNN(node_feature_dimension=2, action_space_dimension=4, nn_type="policy", diameter=5)
+new_policyNN = new_MPNN(node_feature_dimension=2, action_space_dimension=4, nn_type="policy", diameter=5)
 policyNN.eval()
 new_policyNN.eval()
 new_policyNN.load_state_dict(policyNN.state_dict())

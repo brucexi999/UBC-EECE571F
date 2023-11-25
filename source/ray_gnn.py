@@ -6,7 +6,7 @@ import gym
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 from ray.rllib.utils.annotations import override
-from GNN import MPNN
+from GNN import MPNN, new_MPNN
 import logging
 
 
@@ -26,13 +26,13 @@ class MPNNModel(TorchModelV2, nn.Module):
         # TODO: Optimize above code & add more!
 
         # Policy & value networks
-        self.policy_nn = MPNN(
+        self.policy_nn = new_MPNN(
             node_feature_dimension=self.node_features_dim,
             action_space_dimension=self.action_space_dim,
             nn_type="policy",
             diameter=diameter
         )
-        self.value_nn = MPNN(
+        self.value_nn = new_MPNN(
             node_feature_dimension=self.node_features_dim,
             action_space_dimension=self.action_space_dim,
             nn_type="value",
