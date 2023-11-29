@@ -109,7 +109,7 @@ class MPNN(nn.Module):
                 updated_node_features[batch] = self.update(aggregated_messages[batch], node_features[batch])
             #logger.critical("updated node features:\n", node_features)
             node_features = updated_node_features
-            
+
             #print(node_features)
 
         # Readout
@@ -161,9 +161,12 @@ class new_MPNN(nn.Module):
         self.node_feature_dimension = node_feature_dimension
         self.action_space_dimension = action_space_dimension
 
+        self.input_encoder = nn.Linear(self.node_feature_dimension, self.node_feature_dimension)
+
         self.message = nn.Sequential(
             nn.Linear(self.node_feature_dimension * 2 + 1, self.node_feature_dimension),
-            nn.SELU()
+            nn.SELU(),
+            nn.Linear(self.node_feature_dimension, self.node_feature_dimension)
         )
 
         # Update network
@@ -207,6 +210,9 @@ class new_MPNN(nn.Module):
                 v_value = torch.zeros(self.num_batches)
                 return v_value
 
+        # Input encoding
+        node_features = self.input_encoder(node_features)
+
         for _ in range(self.diameter):
             # Identify the source and target nodes for each edge
             # This is the indices for individual batches, since all batches have the same adj mat,
@@ -217,7 +223,7 @@ class new_MPNN(nn.Module):
             source_features = node_features[batch_indices, source_indices]
             #print("source_features: ", source_features)
             target_features = node_features[batch_indices, target_indices]
-            
+
             #print("target_features: ", target_features)
             # Gather the edge features
             edge_feats = edge_features[batch_indices, source_indices, target_indices].unsqueeze(-1)
@@ -246,7 +252,7 @@ class new_MPNN(nn.Module):
             # Vectorized node update
             updated_node_features = self.update(aggregated_messages.view(-1, self.node_feature_dimension), node_features.view(-1, self.node_feature_dimension))
             node_features = updated_node_features.view(self.num_batches, self.num_nodes_per_batch, self.node_feature_dimension)
-            
+
             #print(node_features)
 
         # Readout

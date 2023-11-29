@@ -36,8 +36,8 @@ class SimpleEnv(Env):
         })
 
         self.initialize_mat()
-        self.path_x = [0]
-        self.path_y = [0]
+        self.path_x = [self.agent_position[0]]
+        self.path_y = [self.agent_position[1]]
 
     def initialize_mat(self):
         """Initialize the node feature, adjacency and edge feature matrix"""
@@ -170,6 +170,10 @@ class SimpleEnv(Env):
         # Plot the agent path
         plt.plot(self.path_x, self.path_y, 'r')
 
+        for i in self.nets:
+            x_coords, y_coords = i
+            plt.scatter(x_coords, y_coords)
+
         # Set the labels and title
         plt.xlabel('X')
         plt.ylabel('Y')
@@ -187,12 +191,13 @@ class SimpleEnv(Env):
 
     def reset(self):
         self.step_counter = 0
-        self.agent_position = np.array([0, 0])
+        self.agent_position = np.array(self.nets[0])
+        self.goal_position = np.array(self.nets[-1])
         self.edge_capacity = self.initial_capacity.copy()
         self.initialize_mat()
         self.update_node_feature_mat()
-        self.path_x = [0]
-        self.path_y = [0]
+        self.path_x = [self.agent_position[0]]
+        self.path_y = [self.agent_position[1]]
         observation = {
             'node_feature_mat': torch.from_numpy(self.node_feature_mat).float(),
             'edge_feature_mat': torch.from_numpy(self.edge_feature_mat).int(),
