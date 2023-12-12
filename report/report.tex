@@ -73,13 +73,9 @@ Numerous studies in existing literature have verified the effectiveness of emplo
 
     
 \section{Methodology}
-In this proposal, we limit our discussion to a simplified case of IC routing to facilitate the rapid development of a prototype. As the project advances, we will introduce additional complexities to refine and compact the model.
 
-\subsection{Modeling IC routing as a grid graph}
-\autoref{fig:grid} illustrates a simplified IC routing problem, represented as a grid graph with a single net. The grid, sized 4x4 and with an edge capacity of 1, contains a net composed of two pins positioned at coordinates (0,0) and (3,3). The grid comprises 16 nodes in total. Assuming the RL agent initiates its path at node (0,0), its destination is fixed at (3,3). The grid is defined by a node feature matrix $\mathbf{X}$, an edge feature matrix $\mathbf{E}$, and the adjacency matrix $\mathbf{A}$.
-
-Matrix $\mathbf{X}$, with dimensions of 16x2, consists of rows that represent the binary feature vectors of nodes. The first element of each row signifies the presence of the RL agent, while the second element indicates whether a target resides at that specific node. Both $\mathbf{E}$ and $\mathbf{A}$ are 16x16 matrices. In particular, $\mathbf{E}$ encapsulates the scalar capacities of the edges connecting the nodes.
-
+\subsection{IC routing as a pathfinding problem}
+\autoref{fig:grid} illustrates a simplified IC routing problem, represented as a pathfinding problem on a grid graph. A net consists of two pins, (0,0) and (3,3), needs to be routed. Additionally, each edge has a capacity of 1. In other words, the task is to find a path with minimum length between these two points while every edge on the graph can at most be traversed once.
 
 \begin{figure}[h!]
     \centering
@@ -88,12 +84,21 @@ Matrix $\mathbf{X}$, with dimensions of 16x2, consists of rows that represent th
     \label{fig:grid}
 \end{figure}
 
-\subsection{GNN architectural design}
+\subsection{GNN-based RL framework for IC routing (overview)}
+\subsection{Environment}
+\subsubsection{Observations}
+\subsubsection{Reward function}
+\subsection{Agent}
+\subsubsection{Actions}
+\subsubsection{GNN architectural design}
 The GNN employs a message-passing mechanism, processing inputs of matrices $\mathbf{X}$, $\mathbf{E}$, and $\mathbf{A}$ from the RL environment and yielding the probability distribution of all potential actions. An MLP implements the message network, with messages being aggregated through element-wise summation. Node states are updated using a Gated Recurrent Unit (GRU). 
 
 Following the message-passing phase, the updated node states are fed into another MLP, culminating in a softmax layer that generates the action probability distribution.
 
+
 The GNN architecture cannot reply on the graph topology, e.g., the number of nodes. We want the GNN to generalize to graphs of any size. 
+\subsection{Training}
+
 
 \subsection{RL policy training}
 We plan to integrate the proposed GNN into our RL router, serving as its policy network. The training will be conducted using PPO with RLlib. The GNN's parameters will be refined through stochastic gradient descent, guided by feedback from the value network.
