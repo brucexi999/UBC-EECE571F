@@ -15,6 +15,8 @@
 \usepackage{tikz}
 \usepackage{pgfplots}
 \usepackage{tabularx,ragged2e}
+\usepackage{amsmath}
+
 
 
 \newcolumntype{L}{>{\RaggedRight}X}
@@ -80,7 +82,8 @@ Numerous studies in existing literature have verified the effectiveness of emplo
     \label{fig:grid}
 \end{figure}
 
-\subsection{GNN-based RL framework for IC routing (overview)}
+\subsection{GNN-based RL framework for IC routing}
+An illustration of the proposed RL routing framework is shown in \autoref{fig:overview}. The framework consists of an agent repeatedly interacting with an environment. At time step $t$, the agent receives observation $S_{t}$ and reward $R_{t}$, and at the next time step, $t+1$, it provides action $A_{t+1}$ to the environment. The agent is governed by a policy and a value network. The policy network is a function approximator of the policy $\pi_{\theta_1}(a|s)=P(A_{t+1}=a|S_{t}=s)$, which represents the probability of taking action $a$ given the environment is in state $s$. This function is represented by our proposed GNN, parameterized by $\theta_1$, which will be described shortly. The value network is the approximator of the value function $V_{\theta_2}(s)$, which is used to update the parameters of the policy network $\theta_1$. It is represented by another GNN with the same architecture with the policy network. However, these two networks do not share parameters with each other, i.e., $\theta_1\neq\theta_2$. 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=\textwidth]{figure/overview.png}
@@ -89,17 +92,31 @@ Numerous studies in existing literature have verified the effectiveness of emplo
 \end{figure}
 
 \subsection{Environment}
+The environment represents the grid pathfinding problem. It receives actions from the agent, update internal states, and provide new observation state and reward to the agent.
 \subsubsection{Observations}
+Observations are the states that an agent can perceive from the environment, encapsulating crucial information about the environment itself. It consists of a node feature matrix $\mathbf{X} \in \mathbb{R}^{N \times 2}$, an edge feature matrix $\mathbf{E} \in \mathbb{R}^{N \times N}$, and an adjacency matrix $\mathbf{A} \in \mathbb{R}^{N \times N}$. In a grid consists of $N$ nodes, each node is denoted by a 2D feature vector $x$ with both elements being binary. The first element $x_1$ indicates the agent is currently at this node if it equals to 1, while $x_2$ indicates the target position. $\mathbf{E}$ contains the scalar capacity of each edge, which will be reduced by 1 each time the agent walks across a particular edge. 
+
+%TODO: demonstration
+
 \subsubsection{Reward function}
+The environment imposes a -1 penalty on the agent for each step taken that does not lead to the target, fostering a drive to discover the shortest path. Reaching the target (the agent and the target sit at the same node) yields a +100 reward, and when this happens, there will be a vector $x$ in $\mathbf{X}$ having both of its two elements equal to 1.
+\begin{equation}
+    R(\mathbf{X}) = \begin{cases} 
+    100 & \text{if } \exists i \in \{1, 2, \ldots, N\}, x_{i_1} = x_{i_2} = 1, \\
+    -1 & \text{otherwise}.
+    \end{cases}
+    \end{equation}
+This configuration incites the agent to minimize wirelength, equating to the distance traveled to reach the target. Unnecessary deviations culminate in diminished cumulative rewards.
+
 \subsection{Agent}
+The agent receives observations and rewards from the environment, which are fed into the policy and value network to generate probabilities of actions. During training, the networks' parameters are tuned such that a sequence of actions leading to maximum cumulative reward will be generated. 
+
 \subsubsection{Actions}
+The actions are encoded by an integer ranges from 0 to 3, meaning the agent goes up, right, down, or left from its current position by traversing through a particular edge. After each action the agent has taken, the environment will transition into a new state, and $\mathbf{E}$ and $\mathbf{X}$ will be updated.
+
 \subsubsection{GNN architectural design}
-The GNN employs a message-passing mechanism, processing inputs of matrices $\mathbf{X}$, $\mathbf{E}$, and $\mathbf{A}$ from the RL environment and yielding the probability distribution of all potential actions. An MLP implements the message network, with messages being aggregated through element-wise summation. Node states are updated using a Gated Recurrent Unit (GRU). 
-
-Following the message-passing phase, the updated node states are fed into another MLP, culminating in a softmax layer that generates the action probability distribution.
 
 
-The GNN architecture cannot reply on the graph topology, e.g., the number of nodes. We want the GNN to generalize to graphs of any size. 
 \subsection{Training}
 
 
@@ -109,15 +126,6 @@ We plan to integrate the proposed GNN into our RL router, serving as its policy 
 
 %TODO: Briefly explain what is multi-agent RL and its advantages for our given problem. Also mention the paper which used a GNN as the policy network for the RL agent \cite{Almasan2022}. Also discuss the overall architecture of the GNN that we're going to use, and mention which libraries we're using (i.e., PyTorch, PyG, and RLLib). Adding a figure depicting the routing problem in a grid would also be very helpful. Also, don't forget to come up with a rough timeline and replace the 'X' values below!
 
-\subsection{Project Timeline}
-\begin{itemize}
-    \item Conduct an extended literature review to gather comprehensive insights and foundational knowledge (5 days).
-    \item Develop the GNN prototype, integrate it with the RL router, and initiate training on a preliminary benchmark (14 days).
-    \item Evaluate the enhanced RL router’s performance on a variety of benchmarks, including those analogous and distinct from the training set (1 day).
-    \item Analyze the outcomes to assess the model's generalization capabilities and performance metrics, making figures and tables (3 days).
-    \item (Bonus) Expand the model and its design to accommodate multi-agent concurrent routing, enhancing scalability and efficiency (7 days).
-    \item Writing up the report (14 days).
-\end{itemize}
 
     
 \section{Experiments}
