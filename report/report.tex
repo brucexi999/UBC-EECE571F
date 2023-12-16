@@ -109,23 +109,35 @@ The environment imposes a -1 penalty on the agent for each step taken that does 
 This configuration incites the agent to minimize wirelength, equating to the distance traveled to reach the target. Unnecessary deviations culminate in diminished cumulative rewards.
 
 \subsection{Agent}
-The agent receives observations and rewards from the environment, which are fed into the policy and value network to generate probabilities of actions. During training, the networks' parameters are tuned such that a sequence of actions leading to maximum cumulative reward will be generated. 
+The agent receives observations and rewards from the environment, which are fed into the policy and value network to generate probability distributions of actions. During training, the networks' parameters are tuned such that a sequence of actions leading to maximum cumulative reward will be generated. 
 
 \subsubsection{Actions}
 The actions are encoded by an integer ranges from 0 to 3, meaning the agent goes up, right, down, or left from its current position by traversing through a particular edge. After each action the agent has taken, the environment will transition into a new state, and $\mathbf{E}$ and $\mathbf{X}$ will be updated.
 
-\subsubsection{GNN architectural design}
+\subsubsection{GNN design}
+The GNN takes $\mathbf{A}$, $\mathbf{E}$ and $\mathbf{X}$ as input, it first encode the node feature matrix $\mathbf{X}$ into hidden representation matrix $\mathbf{H^t}$. That is,
+\begin{equation}
+    h_i^0 = F_{encode}(x_i)
+\end{equation}
+with $F_{encode}$ being an MLP. The superscript $t$ of $H$ represents the number of message passing performed. Initially, when no message passing has been performed, $t=0$. 
 
+The second step is to compute the message for each node, formulated as 
+\begin{equation}
+    m_{ji} = F_{message}([h_j^t, h_i^t, e_{ji}])
+\end{equation}
+with $F_{message}$ being another MLP. $[h_j^t, h_i^t, e_{ji}]$ represents the concatenation of $h_j^t$, $h_i^t$, and $e_{ji}$, where $h_j^t$ and $h_i^t$ are hidden states of node $i$ and $j$, extracted from $\mathbf{H^t}$. $e_{ji}\in \mathbf{E}$ is the scalar capacity of the edge connecting the two nodes. The third step is to aggregate the messages for each node from all of their neighboring nodes. 
+\begin{equation}
+    \bar{m}_{i} = \sum_{j\in N_{in}} m_{ji}
+\end{equation}
+The aggregated message $\bar{m}_{i}$ of node $i$ is the element-wise summation of messages sent towards node $i$ from all of its $N_{in}$ neighbors. The forth step updates the hidden states of all nodes using their current states and aggregated messages. 
+\begin{equation}
+    h_{i}^{t+1} = F_{update}(h_{i}^t, \bar{m}_{i})
+\end{equation}
+Here, $F_{update}$ is implemented by using a gated recurrent unit (GRU). The message passing, i.e., step 2 to 4, will be performed $T$ times, where $T$ is the diameter of the input grid graph. 
 
+The final step is to read out the policy logits for the policy network, or the value for the value network. The policy logits will be further fed into a softmax layer to get the probability distribution of actions. This step sum all node states $h_i^T$ element-wisely, and forward the result to an MLP.
 \subsection{Training}
-
-
-\subsection{RL policy training}
-We plan to integrate the proposed GNN into our RL router, serving as its policy network. The training will be conducted using PPO with RLlib. The GNN's parameters will be refined through stochastic gradient descent, guided by feedback from the value network.
-
-
-%TODO: Briefly explain what is multi-agent RL and its advantages for our given problem. Also mention the paper which used a GNN as the policy network for the RL agent \cite{Almasan2022}. Also discuss the overall architecture of the GNN that we're going to use, and mention which libraries we're using (i.e., PyTorch, PyG, and RLLib). Adding a figure depicting the routing problem in a grid would also be very helpful. Also, don't forget to come up with a rough timeline and replace the 'X' values below!
-
+The proposed GNN is integrated into our RL routing framework, serving as its policy and value network. The training will be conducted using PPO (REF) with RLlib. The GNN's parameters will be refined through stochastic gradient descent, guided by value feedback from the value network.
 
     
 \section{Experiments}
