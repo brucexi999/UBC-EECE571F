@@ -141,18 +141,41 @@ The proposed GNN is integrated into our RL routing framework, serving as its pol
 
     
 \section{Experiments}
-We will construct a baseline using an MLP policy network and train it on a simple benchmark to facilitate a comparative analysis.
+We constructed an MLP-based RL framework as a baseline and we compared the performance of the GNN-based RL network with it. Both frameworks were trained in benchmark A, and the obtained policies were tested using benchmark B. The details of the two benchmarks are listed in the table below.
 
-\subsection{Comparing Training Efficiency}
+\begin{table}[h!]
+    \caption{Two benchmarks used for training and testing.}
+    \centering
+    \begin{tabular}{|c c c|}
+        \hline
+        \hline
+         & Benchmark A & Benchmark B \\
+        \hline
+        Length & 4 & 4 \\
+        Width & 4 & 4 \\
+        Source node coordinates & (0,0) & (3,0) \\
+        Target node coordinates & (3,2) & (0,1) \\
+        Edge capacity & 2 & 2 \\
+        \hline
+        \hline
+    \end{tabular}
+    \label{tab:benchmark}
+    \end{table} 
+
+\subsection{Comparing training efficiency}
 This experiment aims to compare the training efficiency of the GNN-equipped router with the baseline router, both trained on the same benchmark. We will assess their performance by examining the plots of reward versus training iterations. The objective is to evaluate the training efficiency of the GNN-equipped router in comparison to the baseline. As suggested by \cite{Wang2018}, we anticipate that the new design will demonstrate comparable, if not superior, training efficiency.
 
 \subsection{Comparing Zero-Shot Performance} \label{m:0}
 We will employ the zero-shot policies derived from the previous experiment to perform inference on several unseen benchmarks. These benchmarks will feature netlists with canvas sizes, numbers of nets, and total numbers of pins per net that resemble the training benchmark. The comparison criteria will include rewards and routing solution quality (wire length, overflow). We predict that the new GNN-equipped design will surpass the baseline in performance.
 
+THIS PART DIDN'T WORK OUT. BOTH GNN AND MLP GOT 0 REWARD. 
+
 \subsection{Comparing Fine-Tuning Performance}
 This experiment is designed to evaluate the scalability of the GNN to more complex problems. We will initiate zero-shot inference on benchmarks characterized by different numbers of nets, chip canvas sizes, and numbers of pins per net than the training benchmark. We anticipate a decrease in zero-shot performance compared to the results of \autoref{m:0}, indicating a likely need for policy fine-tuning.
 
 Both the new design and baseline policies will undergo fine-tuning for an equal number of iterations. We will compare their performances based on rewards and solution quality metrics. Our expectation leans towards the new GNN-equipped design demonstrating superior adaptability and performance after fine-tuning.
+
+THIS PART DIDN'T WORK OUT EITHER. BOTH GNN AND MLP SHOWED FIAT LINE.
 
 \begin{figure}[h!]
     \centering
