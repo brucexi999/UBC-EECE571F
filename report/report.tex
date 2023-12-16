@@ -16,6 +16,7 @@
 \usepackage{pgfplots}
 \usepackage{tabularx,ragged2e}
 \usepackage{amsmath}
+\usepackage{subcaption}
 
 
 
@@ -29,7 +30,7 @@
 \title{Generalizable IC Routing using Deep RL with a GNN-based Policy Network}
 
 \author{%
-    Roozmehr Jalilian, Shidi Xi \\
+    Roozmehr Jalilian, Bruce Xi \\
     Department of Electrical \& Computer Engineering \\
     The University of British Columbia \\
     \texttt{\{roozmehr.jalilian,xsd99\}@ece.ubc.ca} \\
@@ -69,7 +70,7 @@ overflow, impacts vital chip metrics like performance, power, and area
 \cite{Hu2001}.
 
 For 2-dimensional circuit layouts, routing can be modeled as a pathfinding
-problem in a 2D grid, were the objective is to establish paths connecting pins
+problem in a 2D grid, where the objective is to establish paths connecting pins
 placed on different coordinates of the said grid. This grid can be treated like
 a graph, with the circuit's pins placed on its nodes and the connections between
 them occupying its edges. Each edge possesses a capacity feature, indicating the
@@ -84,18 +85,9 @@ set of pins requiring connection, and a {\it netlist} is a set consisting of
 multiple nets that need routing during the process. For clarity, we will use the
 terms {nodes} and {pins} interchangeably throughout this paper.
 
-Traditional routing often involves decomposing multi-pin nets into 2-pin
-sub-nets, sequentially routed using maze-routing algorithms like A*.
-Decomposition typically involves constructing a minimum spanning tree from the
-pins. Despite the simplicity and efficacy of this approach, the net-ordering
-issue persists: later routed nets face blockages leading to edge overflow, while
-early-stage nets lack foresight to conserve resources for subsequent nets.
-Designers typically resort to rip-up and re-route strategies, were congested
-pathways are removed and re-routed.
-
-Complexities of the traditional routing algorithms have inspired researchers to
+Complexities of traditional routing algorithms have inspired researchers to
 use machine-learning-based techniques instead. One such technique is
-reinforcement learning (RL), and specifically, its deep variant (DRL), which is
+RL, and specifically, its deep variant (DRL), which is
 a fusion of RL and deep neural networks. It has showcased capabilities exceeding
 human performance in various contexts \cite{mnih2013playing}.
 
@@ -107,15 +99,14 @@ homogeneous and fully-cooperative. Trained with proximal policy optimization
 demonstrated superior performance compared to the A* baseline. However, a
 limitation emerged: the policy, though effective for specific benchmarks, lacked
 generalizability for other, albeit similar, problems. We attributed this
-shortfall to the policy neural network's architecture, comprising several fully
-connected (FC) layers, which struggled to extract rich information from the
+shortfall to the policy neural network's architecture, comprising a multilayer perceptron (MLP), which struggled to extract rich information from the
 state encodings.
 
-Contrastingly, graph neural networks (GNNs) exhibit robust generalization
+Contrastingly, GNNs exhibit robust generalization
 capabilities when processing graphical data \cite{Almasan2022,Wang2018},
 aligning with the routing problem’s grid graph model. In this project, we
 introduce a novel message-passing GNN architecture integrated into the RL
-router’s policy network. The GNN accepts the routing grid graph from the
+router’s policy and value networks. The GNN accepts the routing grid graph from the
 environment as state input and determines actions accordingly. This innovation
 aims to bolster the RL router’s ability to generalize trained policy to problems
 not encountered during training, promising substantial reductions in computation
@@ -124,13 +115,13 @@ time.
 
 \section{Related work}
 Numerous studies in existing literature have verified the effectiveness of
-employing Graph Neural Networks (GNNs) within the policy/value network of
-Reinforcement Learning (RL) models to enhance generalization, especially when
+employing GNNs within the policy/value network of
+RL models to enhance generalization, especially when
 the agent’s environment is graph-representable. However, to our knowledge, no
 existing study has directly explored the use of GNN equipped RL for IC routing.
 
 For instance, \cite{Liao2020} introduced an RL IC router trained via a Deep
-Q-Network (DQN), utilizing a multi-layer perceptron (MLP) as the RL agent's
+Q-Network (DQN), utilizing an MLP as the RL agent's
 value network. However, similar to our previous work, it showed a lack of
 generalization. \cite{liao2020attention} proposed an attention-based RL router,
 which was built on top of a genetic algorithm (GA) router. Although the authors
@@ -156,11 +147,7 @@ and they didn't evaluate their agent in terms of generalizability.
 \section{Methodology}
 
 \subsection{IC routing as a pathfinding problem}
-\autoref{fig:grid} illustrates a simplified IC routing problem, represented as a
-pathfinding problem on a grid graph. A net consists of two pins, (0,0) and
-(3,3), needs to be routed. Additionally, each edge has a capacity of 1. In other
-words, the task is to find a path with minimum length between these two points
-while every edge on the graph can at most be traversed once.
+\autoref{fig:grid} illustrates a simplified IC routing problem, framed as a pathfinding task on a grid graph. The objective is to route a net between two pins at coordinates (0,0) and (3,3). Each edge in this graph has a capacity of one, indicating that it can be traversed no more than once. The challenge, therefore, lies in finding the shortest path between these points while adhering to the edge traversal constraints.
 
 \begin{figure}[h!]
     \centering
@@ -170,20 +157,8 @@ while every edge on the graph can at most be traversed once.
 \end{figure}
 
 \subsection{GNN-based RL framework for IC routing}
-An illustration of the proposed RL routing framework is shown in
-\autoref{fig:overview}. The framework consists of an agent repeatedly
-interacting with an environment. At time step $t$, the agent receives
-observation $S_{t}$ and reward $R_{t}$, and at the next time step, $t+1$, it
-provides action $A_{t+1}$ to the environment. The agent is governed by a policy
-and a value network. The policy network is a function approximator of the policy
-$\pi_{\theta_1}(a|s)=P(A_{t+1}=a|S_{t}=s)$, which represents the probability of
-taking action $a$ given the environment is in state $s$. This function is
-represented by our proposed GNN, parameterized by $\theta_1$, which will be
-described shortly. The value network is the approximator of the value function
-$V_{\theta_2}(s)$, which is used to update the parameters of the policy network
-$\theta_1$. It is represented by another GNN with the same architecture with the
-policy network. However, these two networks do not share parameters with each
-other, i.e., $\theta_1\neq\theta_2$. 
+An illustration of the proposed RL routing framework is displayed in \autoref{fig:overview}. The framework involves an agent engaging repeatedly with an environment. At each time step \(t\), the agent is presented with an observation \(S_{t}\) and a reward \(R_{t}\), and then at the subsequent time step, \(t+1\), it executes an action \(A_{t+1}\) in the environment. This process is directed by a policy network and a value network. The policy network approximates the policy \(\pi_{\theta_1}(a|s) = P(A_{t+1}=a|S_{t}=s)\), signifying the probability of choosing action \(a\) given the environment is in state \(s\). This function is represented by the proposed GNN, parameterized by \(\theta_1\), which will be detailed later. The value network approximates the value function \(V_{\theta_2}(s)\) and is instrumental in updating the policy network's parameters \(\theta_1\). It employs a similar GNN architecture as the policy network but operates with distinct parameters, ensuring \(\theta_1 \neq \theta_2\).
+
 \begin{figure}[h!]
     \centering
     \includegraphics[width=\textwidth]{figure/overview.png}
@@ -191,100 +166,66 @@ other, i.e., $\theta_1\neq\theta_2$.
     \label{fig:overview}
 \end{figure}
 
+
 \subsection{Environment}
-The environment represents the grid pathfinding problem. It receives actions
-from the agent, update internal states, and provide new observation state and
-reward to the agent.
+The environment encapsulates the grid pathfinding problem. It processes actions from the agent, updates its internal states, and subsequently provides new observation states and rewards to the agent.
 \subsubsection{Observations}
-Observations are the states that an agent can perceive from the environment,
-encapsulating crucial information about the environment itself. It consists of a
-node feature matrix $\mathbf{X} \in \mathbb{R}^{N \times 2}$, an edge feature
-matrix $\mathbf{E} \in \mathbb{R}^{N \times N}$, and an adjacency matrix
-$\mathbf{A} \in \mathbb{R}^{N \times N}$. In a grid consists of $N$ nodes, each
-node is denoted by a 2D feature vector $x$ with both elements being binary. The
-first element $x_1$ indicates the agent is currently at this node if it equals
-to 1, while $x_2$ indicates the target position. $\mathbf{E}$ contains the
-scalar capacity of each edge, which will be reduced by 1 each time the agent
-walks across a particular edge. 
+Observations are the states discernible by an agent from the environment, containing essential details about the environment. These include a node feature matrix \(\mathbf{X} \in \mathbb{R}^{N \times 2}\), an edge feature matrix \(\mathbf{E} \in \mathbb{R}^{N \times N}\), and an adjacency matrix \(\mathbf{A} \in \mathbb{R}^{N \times N}\). In a grid comprising \(N\) nodes, each node is represented by a 2D feature vector \(x\), with both elements being binary. The first element, \(x_1\), signifies that the agent is currently at this node if it equals 1, while \(x_2\) denotes the target position. The matrix \(\mathbf{E}\) holds the scalar capacity of each edge, which decreases by 1 each time the agent traverses a specific edge.
+
 
 %TODO: demonstration
 
-\subsubsection{Reward function}
-The environment imposes a -1 penalty on the agent for each step taken that does
-not lead to the target, fostering a drive to discover the shortest path.
-Reaching the target (the agent and the target sit at the same node) yields a
-+100 reward, and when this happens, there will be a vector $x$ in $\mathbf{X}$
-having both of its two elements equal to 1.
+\subsubsection{Reward Function}
+The environment imposes a -1 penalty on the agent for each step taken not leading to the target, thereby incentivizing the discovery of the shortest path. Successfully reaching the target, characterized by the agent and target occupying the same node, grants a +100 reward. This event is indicated when a vector \(x\) in \(\mathbf{X}\) has both elements equal to 1. The reward function \( R(\mathbf{X}) \) is defined as:
 \begin{equation}
     R(\mathbf{X}) = \begin{cases} 
     100 & \text{if } \exists i \in \{1, 2, \ldots, N\}, x_{i_1} = x_{i_2} = 1, \\
     -1 & \text{otherwise}.
     \end{cases}
-    \end{equation}
-This configuration incites the agent to minimize wirelength, equating to the
-distance traveled to reach the target. Unnecessary deviations culminate in
-diminished cumulative rewards.
+\end{equation}
+This reward structure encourages the agent to minimize wirelength, synonymous with the distance traveled to reach the target. Any unnecessary deviations result in reduced cumulative rewards.
 
 \subsection{Agent}
-The agent receives observations and rewards from the environment, which are fed
-into the policy and value network to generate probability distributions of
-actions. During training, the networks' parameters are tuned such that a
-sequence of actions leading to maximum cumulative reward will be generated. 
+The agent, upon receiving observations and rewards from the environment, inputs these into the policy and value networks. The former generate probability distributions of actions. During training, the parameters of these networks are optimized to produce a sequence of actions that maximizes cumulative reward.
 
 \subsubsection{Actions}
-The actions are encoded by an integer ranges from 0 to 3, meaning the agent goes
-up, right, down, or left from its current position by traversing through a
-particular edge. After each action the agent has taken, the environment will
-transition into a new state, and $\mathbf{E}$ and $\mathbf{X}$ will be updated.
+Actions within this framework are represented by integers ranging from 0 to 3, corresponding to the agent moving up, right, down, or left from its current position via an edge. Following each action, the environment transitions to a new state, resulting in updates to \(\mathbf{E}\) and \(\mathbf{X}\).
 
-\subsubsection{GNN design}
-The GNN takes $\mathbf{A}$, $\mathbf{E}$ and $\mathbf{X}$ as input, it first
-encode the node feature matrix $\mathbf{X}$ into hidden representation matrix
-$\mathbf{H^t}$. That is,
+\subsubsection{GNN Design}
+The Graph Neural Network (GNN) utilizes \(\mathbf{A}\), \(\mathbf{E}\), and \(\mathbf{X}\) as inputs. Initially, it encodes the node feature matrix \(\mathbf{X}\) into a hidden representation matrix \(\mathbf{H^t}\). This process is represented as:
 \begin{equation}
-    h_i^0 = F_{encode}(x_i)
+    h_i^0 = F_{\text{encode}}(x_i)
 \end{equation}
-with $F_{encode}$ being an MLP. The superscript $t$ of $H$ represents the number
-of message passing performed. Initially, when no message passing has been
-performed, $t=0$. 
+where \(F_{\text{encode}}\) is an MLP. The superscript \(t\) in \(\mathbf{H}\) denotes the number of message-passing iterations. At the outset, when no message passing has occurred, \(t=0\). 
 
-The second step is to compute the message for each node, formulated as 
+The subsequent step involves computing messages for each node, formulated as:
 \begin{equation}
-    m_{ji} = F_{message}([h_j^t, h_i^t, e_{ji}])
+    m_{ji} = F_{\text{message}}([h_j^t, h_i^t, e_{ji}])
 \end{equation}
-with $F_{message}$ being another MLP. $[h_j^t, h_i^t, e_{ji}]$ represents the
-concatenation of $h_j^t$, $h_i^t$, and $e_{ji}$, where $h_j^t$ and $h_i^t$ are
-hidden states of node $i$ and $j$, extracted from $\mathbf{H^t}$. $e_{ji}\in
-\mathbf{E}$ is the scalar capacity of the edge connecting the two nodes. The
-third step is to aggregate the messages for each node from all of their
-neighboring nodes. 
+Here, \(F_{\text{message}}\) is another MLP. The vector \([h_j^t, h_i^t, e_{ji}]\) is a concatenation of the hidden states \(h_j^t\) and \(h_i^t\) from \(\mathbf{H^t}\), and the scalar capacity \(e_{ji} \in \mathbf{E}\) of the edge connecting nodes \(i\) and \(j\). The third step aggregates messages for each node from all neighboring nodes:
 \begin{equation}
-    \bar{m}_{i} = \sum_{j\in N_{in}} m_{ji}
+    \bar{m}_{i} = \sum_{j \in N_{\text{in}}} m_{ji}
 \end{equation}
-The aggregated message $\bar{m}_{i}$ of node $i$ is the element-wise summation
-of messages sent towards node $i$ from all of its $N_{in}$ neighbors. The forth
-step updates the hidden states of all nodes using their current states and
-aggregated messages. 
+The aggregated message \(\bar{m}_{i}\) for node \(i\) is the sum of messages received from all its \(N_{\text{in}}\) neighbors. The fourth step updates the hidden states of all nodes using their current states and aggregated messages:
 \begin{equation}
-    h_{i}^{t+1} = F_{update}(h_{i}^t, \bar{m}_{i})
+    h_{i}^{t+1} = F_{\text{update}}(h_{i}^t, \bar{m}_{i})
 \end{equation}
-Here, $F_{update}$ is implemented by using a gated recurrent unit (GRU). The
-message passing, i.e., step 2 to 4, will be performed $T$ times, where $T$ is
-the diameter of the input grid graph. 
+In this step, \(F_{\text{update}}\) is implemented using a gated recurrent unit (GRU). The message-passing process, encompassing steps 2 to 4, is repeated \(T\) times, where \(T\) is the diameter of the input grid graph.
 
-The final step is to read out the policy logits for the policy network, or the
-value for the value network. The policy logits will be further fed into a
-softmax layer to get the probability distribution of actions. This step sum all
-node states $h_i^T$ element-wisely, and forward the result to an MLP.
+The final step involves reading out the policy logits for the policy network, or the value for the value network. The policy logits are then passed through a softmax layer to obtain the probability distribution of actions. This step aggregates all node states \(h_i^T\) and forwards the result to another MLP for further processing.
+
+
 \subsection{Training}
-The proposed GNN is integrated into our RL routing framework, serving as its
-policy and value network. The training will be conducted using PPO (REF) with
-RLlib. The GNN's parameters will be refined through stochastic gradient descent,
-guided by value feedback from the value network.
+The proposed GNN is integrated into our RL routing framework, acting as both the policy and value network. Training is conducted using PPO \cite{Schulman2017} with RLlib. The GNN's parameters are optimized through stochastic gradient descent, influenced by the feedback from the value network.
 
-    
 \section{Experiments}
-We constructed an MLP-based RL framework as a baseline and we compared the performance of the GNN-based RL network with it. Both frameworks were trained for 40 iterations with benchmark A, and the obtained policies were tested using benchmark B. The details of the two benchmarks are listed in the table below.
+An MLP-based RL framework serves as a baseline for comparing the performance of our GNN-based RL network. Both frameworks underwent 40 training iterations with benchmark A. Following this, three evaluations were carried out:
+
+(1) Policies trained with benchmark A were tested on the same benchmark to compare the performance and training efficiency between GNN and MLP.
+
+(2) Zero-shot policies from benchmark A, were applied on benchmark B to assess the generalizability of the two frameworks. Details of these benchmarks are provided in the subsequent table.
+
+(3) The policies were further trained on benchmark B for an additional 40 iterations (fine-tuning). The performances of GNN and MLP during fine-tuning were then compared.
 
 \begin{table}[h!]
     \caption{Two benchmarks used for training and testing.}
@@ -303,91 +244,74 @@ We constructed an MLP-based RL framework as a baseline and we compared the perfo
 \end{table}
 
 \subsection{Comparing training efficiency}
-This experiment aims to compare the training efficiency of the GNN-equipped
-router with the baseline router, both trained on the same benchmark. We will
-assess their performance by examining the plots of reward versus training
-iterations. The objective is to evaluate the training efficiency of the
-GNN-equipped router in comparison to the baseline. As suggested by
-\cite{Wang2018}, we anticipate that the new design will demonstrate comparable,
-if not superior, training efficiency.
-
-\subsection{Comparing zero-shot performance} \label{m:0} We will employ the
-zero-shot policies derived from the previous experiment to perform inference on
-several unseen benchmarks. These benchmarks will feature netlists with canvas
-sizes, numbers of nets, and total numbers of pins per net that resemble the
-training benchmark. The comparison criteria will include rewards and routing
-solution quality (wire length, overflow). We predict that the new GNN-equipped
-design will surpass the baseline in performance.
-
-Figure (REF) shows the training and zero-shot inference results for benchmark A,
-along with the obtained routing solution, both for our RL agent (using GNN) and
-the baseline agent (which uses an MLP), respectively. We observe that our agent
-has a better performance during training, as the obtained reward increases
-faster over time compared to the baseline. This performance edge is also evident
-in the obtained solution, since our agent, in contrast to the baseline agent,
-has found a route with minimum wirelength between the two pins.
-
-Unfortunately, due to software bugs caused by the RLLib library, neither agent
-was abel to do proper inference on another benchmark. This is evident by
-observing the obtained reward over time in Figure (REF), as it always remains
-flat with a value of zero. This implies that the agent has gotten stuck in a
-single state and won't choose a different action based on the changes in its
-environment, leading to both RL agents being unable to find a path between the
-two pins in the circuit, let alone find the optimum path.
-
-\subsection{Comparing fine-tuning performance}
-This experiment is designed to evaluate the scalability of the GNN to more
-complex problems. We will initiate zero-shot inference on benchmarks
-characterized by different numbers of nets, chip canvas sizes, and numbers of
-pins per net than the training benchmark. We anticipate a decrease in zero-shot
-performance compared to the results of \autoref{m:0}, indicating a likely need
-for policy fine-tuning.
-
-Both the new design and baseline policies will undergo fine-tuning for an equal
-number of iterations. We will compare their performances based on rewards and
-solution quality metrics. Our expectation leans towards the new GNN-equipped
-design demonstrating superior adaptability and performance after fine-tuning.
-
-Figure (REF) shows the fine-tuning results for both of RL agents. Again, due to
-bugs caused by the RLLib library, neither agent could be fine-tuned when applied
-to benchmarks different to the one used in their training. Similar to the
-results obtained in \autoref{m:0}, the reward versus time curve is a flat line,
-indicating that the policy networks in both RL agents didn't get updated at all,
-causing them to get stuck in a fixed state.
+\autoref{fig:training} displays the training efficiencies (reward versus training iteration) of both the GNN and MLP-based frameworks. Notably, the GNN-based framework demonstrates an ability to attain a higher reward after 40 iterations of training. \autoref{fig:inference} illustrates the routing solutions generated by both frameworks. It is observed that each framework successfully identifies an optimal path between the source and the target node. This outcome is attributed to the simplicity of the benchmark. Consequently, it can be concluded that both GNN and MLP are capable of learning a policy from one benchmark, which then performs optimally when tested with the same benchmark utilized for training.
 
 \begin{figure}[h!]
     \centering
-    \begin{tikzpicture}
-        \begin{axis}[ width=0.4\textwidth, height=0.4\textwidth, axis lines =
-            left, xlabel = Iteration, ylabel = Total loss, ymin=5, ymax=15, ]
-            % The reward function
-            \addplot [ domain=0:100, samples=100, color=red, ] {10 + 2 * exp(-x
-            / 20)};
-            \addlegendentry{RL model}
-            % Baseline
-            \addplot [ domain=0:100, samples=100, color=blue, ] {10};
-            \addlegendentry{Baseline}
-        \end{axis}
-    \end{tikzpicture}
-    \caption{Placeholder figure for total loss vs. time. Not related to any aforementioned experiments.}
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figure/gnn_training.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figure/mlp_training.png}
+        \caption{}
+    \end{subfigure}
+    \caption{Training efficiencies for (a) GNN-based framework, (b) MLP-based framework.}
+    \label{fig:training}
 \end{figure}
 
-\begin{table}[h!]
-    \caption{Placeholder table for the experiments. Not related to any aforementioned experiments.}
+\begin{figure}[h!]
     \centering
-    \begin{tabularx}{\textwidth}{LLLLLLL}
-        \toprule
-        \multicolumn{4}{c}{Benchmark specs} & \multicolumn{3}{c}{Results} \\
-        \cmidrule(r){1-4} \cmidrule(r){5-7} Name & Canvas size & \# of nets &
-        Avg. \# of pins per net & Runtime (s) & Max. memory usage (MB) & Total
-        wirelength \\
-        \midrule
-        test1 & \(8 \times 8\) & 5 & 2.5 & 1.25 & 250 & 100 \\
-        test2 & \(6 \times 6\) & 3 & 1 & 0.60 & 150 & 70 \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-    
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figure/gnn_inference.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figure/mlp_inference.png}
+        \caption{}
+    \end{subfigure}
+    \caption{Inference results for (a) GNN-based framework, (b) MLP-based framework on benchmark A.}
+    \label{fig:inference}
+\end{figure}
+
+\subsection{Comparing zero-shot performance} \label{m:0} 
+\autoref{fig:0shot} presents the zero-shot performance of both the GNN and MLP frameworks on benchmark B, utilizing policies acquired from benchmark A. The results indicate that neither framework is able to produce valid routing results, despite the benchmarks being quite similar and straightforward in nature. This leads to the conclusion that substituting MLP with GNN in the RL framework does not enhance its zero-shot generalizability.
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figure/gnn_0shot.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figure/mlp_0shot.png}
+        \caption{}
+    \end{subfigure}
+    \caption{Zero-shot performance of (a) GNN-based framework, (b) MLP-based framework on benchmark B, using policies trained with benchmark A.}
+    \label{fig:0shot}
+\end{figure}
+
+\subsection{Comparing fine-tuning performance}
+
+\autoref{fig:ft} displays the fine-tuning outcomes for both RL agents. Unfortunately, due to issues originating from the RLlib library, neither agent could undergo effective fine-tuning when exposed to benchmarks different from those used in their initial training. This is evident from the reward versus time curves, which remain flat, signifying that the policy networks in both RL agents did not undergo any updates. Consequently, they remained in a static state, unable to adapt or improve.
+
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figure/fine_tuning.png}
+        \caption{}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width=\textwidth]{figure/fine_tuning.png}
+        \caption{}
+    \end{subfigure}
+    \caption{Fine-tuning  of (a) GNN-based framework, (b) MLP-based framework on benchmark B, based on policies trained with benchmark A.}
+    \label{fig:ft}
+\end{figure}
+
+\section{Conclusion}
+In this project, a message-passing GNN is proposed for integration into an RL framework for IC routing. The aim is to enhance the generalizability of RL policies, allowing for policies trained in one environment to be effectively transferred to or fine-tuned for unseen environments. However, challenges such as implementation limitations and bugs in the RLlib library prevented the attainment of conclusive results. These issues underscore the need for future work, particularly in the manual development and implementation of the RL training policy, to re-evaluate the generalizability of the GNN-based RL framework.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
 {
