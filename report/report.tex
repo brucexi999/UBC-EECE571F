@@ -133,9 +133,9 @@ For instance, \cite{Liao2020} introduced an RL IC router trained via a Deep
 Q-Network (DQN), utilizing a multi-layer perceptron (MLP) as the RL agent's
 value network. However, similar to our previous work, it showed a lack of
 generalization. \cite{liao2020attention} proposed an attention-based RL router,
-which was built on top of a genetic algorithm (GA) router. Although it claimed
-to have significant performance and generalization capabilities, it was only
-compared against the very GA router that acted as its baseline, and the
+which was built on top of a genetic algorithm (GA) router. Although the authors
+claimed it had significant performance and generalization capabilities, it was
+only compared against the very GA router that acted as its baseline, and the
 performance gain could only be described as marginal.
 
 Contrastingly, \cite{Almasan2022} incorporated a GNN as the value network of an
@@ -147,10 +147,10 @@ models wherein the operational problems are graphs. Furthermore,
 \cite{Mirhoseini2021} and \cite{Yue2022} adopted GNNs as encoder layers for
 their respective RL policy and value networks. \cite{Cheng2021} introduced a
 hybrid RL agent, which was designed to solve both IC placement and routing
-simultaneously. They incorporated both CNN and GNN models in the policy network
-of their RL agent to capture as much information about the netlists as possible;
-however, their methodology put more focus on placement than routing, and they
-didn't evaluate their agent in terms of generalizability.
+simultaneously. The authors incorporated both CNN and GNN models in the policy
+network of their RL agent to capture as much information about the netlists as
+possible; however, their methodology put more focus on placement than routing,
+and they didn't evaluate their agent in terms of generalizability.
 
     
 \section{Methodology}
