@@ -129,17 +129,28 @@ Reinforcement Learning (RL) models to enhance generalization, especially when
 the agent’s environment is graph-representable. However, to our knowledge, no
 existing study has directly explored the use of GNN equipped RL for IC routing.
 
-\cite{Liao2020} introduced an RL IC router trained via a Deep Q-Network (DQN),
-utilizing a multi-layer perceptron (MLP) as the RL agent's value network.
-However, similar to our previous work, it showed a lack of generalization.
+For instance, \cite{Liao2020} introduced an RL IC router trained via a Deep
+Q-Network (DQN), utilizing a multi-layer perceptron (MLP) as the RL agent's
+value network. However, similar to our previous work, it showed a lack of
+generalization. \cite{liao2020attention} proposed an attention-based RL router,
+which was built on top of a genetic algorithm (GA) router. Although it claimed
+to have significant performance and generalization capabilities, it was only
+compared against the very GA router that acted as its baseline, and the
+performance gain could only be described as marginal.
+
 Contrastingly, \cite{Almasan2022} incorporated a GNN as the value network of an
 RL agent, also trained by DQN. This approach manifested notable generalization
 capabilities in network routing—a field bearing similarities to IC routing—and
-serves as the principal inspiration for our current proposal. In parallel, both
+serves as the principal inspiration for this paper. In parallel, both
 \cite{Chen2023} and \cite{Wang2018} echoed the integration of GNNs with RL
 models wherein the operational problems are graphs. Furthermore,
 \cite{Mirhoseini2021} and \cite{Yue2022} adopted GNNs as encoder layers for
-their respective RL policy and value networks.
+their respective RL policy and value networks. \cite{Cheng2021} introduced a
+hybrid RL agent, which was designed to solve both IC placement and routing
+simultaneously. They incorporated both CNN and GNN models in the policy network
+of their RL agent to capture as much information about the netlists as possible;
+however, their methodology put more focus on placement than routing, and they
+didn't evaluate their agent in terms of generalizability.
 
     
 \section{Methodology}
