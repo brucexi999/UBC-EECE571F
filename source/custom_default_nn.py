@@ -56,9 +56,9 @@ class BaselineMLPModel(TorchModelV2, nn.Module):
             nn_type="value"
         )
 
-        self.fcnet = TorchFC(
-            obs_space, action_space, num_outputs, model_config, name="fcnet"
-        )
+        #self.fcnet = TorchFC(
+        #    obs_space, action_space, num_outputs, model_config, name="fcnet"
+        #)
 
     def forward(self, input_dict: dict, state: list[torch.Tensor], seq_lens: torch.Tensor) -> tuple[torch.Tensor, list[torch.Tensor]]:
         # Input observation (must be a dictionary containing node & edge features, and adj. matrix)
@@ -70,13 +70,13 @@ class BaselineMLPModel(TorchModelV2, nn.Module):
         adjacency_matrix = obs["adj_max"]
 
         # Calculate new policy & values
-        #policy_logits = self.policy_nn(node_features, edge_features, adjacency_matrix)
-        #self._cur_values = self.value_nn(node_features, edge_features, adjacency_matrix)
-        policy_logits = self.fcnet.forward(input_dict, state, seq_lens)
+        policy_logits = self.policy_nn(node_features, edge_features, adjacency_matrix)
+        self._cur_values = self.value_nn(node_features, edge_features, adjacency_matrix)
+        #policy_logits = self.fcnet.forward(input_dict, state, seq_lens)
 
         return policy_logits, state
 
     def value_function(self):
         #assert self._cur_values is not None, "ERROR: Must call `forward()` first"
-        return self.fcnet.value_function()
+        #return self.fcnet.value_function()
         return torch.reshape(self._cur_values, [-1])
